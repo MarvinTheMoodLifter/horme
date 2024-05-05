@@ -1,18 +1,24 @@
-use std::collections::HashMap;
+extern crate horme;
+use std::io::{stdin, stdout, Write};
+
+use horme::Task;
+
+fn run_prompt(todo_list: &mut Vec<Task>) {
+    loop {
+        let mut stdout = stdout();
+        print!("todo list => ");
+        stdout.flush().expect("Could not flush stdout");
+
+        let mut buffer = String::new();
+        stdin().read_line(&mut buffer).expect("Cannot read line!");
+
+        let args: Vec<&str> = buffer.split_whitespace().collect();
+
+        horme::run(args, todo_list);
+    }
+}
 
 fn main() {
-    let action = std::env::args().nth(1).expect("Please specify an action");
-    let item = std::env::args().nth(2).expect("Please specify an item");
-
-    println!("action: {:?}, item: {:?}", action, item);
-}
-
-struct Todo {
-    map: HashMap<String, bool>,
-}
-
-impl Todo {
-    fn insert(&mut self, key: String) {
-        self.map.insert(key, true);
-    }
+    let mut todo_list: Vec<Task> = Vec::new();
+    run_prompt(&mut todo_list);
 }
