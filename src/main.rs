@@ -1,4 +1,3 @@
-extern crate horme;
 use std::io::{stdin, stdout, Write};
 
 use horme::Task;
