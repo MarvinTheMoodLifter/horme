@@ -6,7 +6,7 @@ use horme::Task;
 fn run_prompt(todo_list: &mut Vec<Task>) {
     loop {
         let mut stdout = stdout();
-        print!("todo list => ");
+        print!("> ");
         stdout.flush().expect("Could not flush stdout");
 
         let mut buffer = String::new();
