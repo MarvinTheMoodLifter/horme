@@ -1,6 +1,7 @@
 mod run;
 mod task;
 mod user_interactions;
+mod utils;
 
 pub use run::run;
 pub use task::Task;
