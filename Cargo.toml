@@ -1,11 +1,8 @@
 [package]
 name = "horme"
 version = "0.1.0"
+authors = ["Marco Perin <marvin.themoodlifter@proton.me>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-
-[dependencies.iced]
-version = "0.12"
+gtk = { version = "0.8", package = "gtk4", features = ["v4_14"] }
