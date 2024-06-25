@@ -2,8 +2,8 @@
 
 # :amphora: Horme :amphora:
 
-Horme is a simple command-line ToDo list application.
-See the [Features](#features) section for more details.
+Horme is a simple command-line ToDo list application.<br>
+See the [Features](#💠-Features) section for more details.
 
 </div>
 
