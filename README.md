@@ -3,12 +3,12 @@
 # :amphora: Horme :amphora:
 
 Horme is a simple command-line ToDo list application.<br>
-See the [Features](#💠-Features) section for more details.
+Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) section for more details.
 
 </div>
 
 ---
-## :scroll: Installation
+## 📦 Install
 To build and run Horme, make sure you have Rust installed on your system. [Here](https://www.rust-lang.org/tools/install) you can find the official guide to install the toolchain.
 
 Then, clone this repository and navigate to the project directory:
@@ -34,7 +34,7 @@ You run the program by executing the binary:
 - `Exit`: Exit the program.
 - `Help`: Display a help message with a list of available commands and their usage.
 
-### 🧪 Brewing
+## 🧪 Upcoming
 * [ ] Add support for displaying tasks in a Terminal User Interface using [Ratatui](https://ratatui.rs).
 * [ ] Implement functionality to filter tasks by completion status, due date, and overdue status in the "list" command.
 * [ ] Divide the tasks into user defined categories.
