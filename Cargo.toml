@@ -5,3 +5,6 @@ authors = ["Marco Perin <marvin.themoodlifter@proton.me>"]
 edition = "2021"
 
 [dependencies]
+color-eyre = "0.6.3"
+crossterm = "0.27.0"
+ratatui = "0.27.0"

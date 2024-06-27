@@ -3,7 +3,7 @@
 # :amphora: Horme :amphora:
 
 Horme is a simple command-line ToDo list application.<br>
-Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) section for more details.
+Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.
 
 </div>
 
