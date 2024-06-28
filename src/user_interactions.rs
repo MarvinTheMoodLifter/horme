@@ -1,14 +1,20 @@
 use crate::task::Task;
 use crate::utils;
+use crate::Status;
 
 // Add a new task
 pub fn add_task(args: Vec<&str>, todo_list: &mut Vec<Task>) {
     if let Some(name) = args.get(1) {
         if let Some(description) = args.get(2) {
-            let task = Task::new(name.to_string(), description.to_string(), None);
+            let task = Task::new(
+                name.to_string(),
+                description.to_string(),
+                Status::Todo,
+                None,
+            );
             todo_list.push(task);
         } else {
-            let task = Task::new(name.to_string(), "".to_string(), None);
+            let task = Task::new(name.to_string(), "".to_string(), Status::Todo, None);
             todo_list.push(task);
         }
     } else {
@@ -26,9 +32,13 @@ pub fn list_tasks(args: Vec<&str>, todo_list: &Vec<Task>) {
     for task in todo_list {
         if args.len() == 1 || args.contains(&"--all") || args.contains(&"-a") {
             utils::print_task(task);
-        } else if args.contains(&"--completed") || args.contains(&"-c") && task.completed {
+        } else if args.contains(&"--completed")
+            || args.contains(&"-c") && task.status == Status::Done
+        {
             utils::print_task(task);
-        } else if args.contains(&"--incomplete") || args.contains(&"-i") && !task.completed {
+        } else if args.contains(&"--incomplete")
+            || args.contains(&"-i") && task.status != Status::Done
+        {
             utils::print_task(task);
         } else if args.contains(&"--due") || args.contains(&"-d") && task.due_date == args[2] {
             utils::print_task(task);

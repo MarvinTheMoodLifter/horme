@@ -11,8 +11,8 @@ pub use ratatui::prelude::*;
 
 pub use app::App;
 pub use run::run;
+pub use task::Status;
 pub use task::Task;
-pub use tui::Tui;
 
 // ---------------------------------- TESTS ----------------------------------
 #[cfg(test)]
@@ -21,7 +21,12 @@ mod tests {
 
     #[test]
     fn new_task() {
-        let task = Task::new("task".to_string(), "description".to_string(), None);
+        let task = Task::new(
+            "task".to_string(),
+            "description".to_string(),
+            Status::Todo,
+            None,
+        );
         assert_eq!(task.name, "task");
     }
 
@@ -32,7 +37,12 @@ mod tests {
         run(Vec::from(["add", "task", "description"]), &mut todo_list);
         assert_eq!(
             todo_list[0],
-            Task::new("task".to_string(), "description".to_string(), Some(0))
+            Task::new(
+                "task".to_string(),
+                "description".to_string(),
+                Status::Todo,
+                Some(0)
+            )
         );
     }
 
@@ -51,7 +61,12 @@ mod tests {
     #[test]
     fn run_list_all() {
         let mut todo_list: Vec<Task> = Vec::new();
-        let task = Task::new("task".to_string(), "description".to_string(), None);
+        let task = Task::new(
+            "task".to_string(),
+            "description".to_string(),
+            Status::Todo,
+            None,
+        );
         todo_list.push(task);
         run(Vec::from(["list"]), &mut todo_list);
     }
@@ -59,7 +74,12 @@ mod tests {
     #[test]
     fn run_list_task() {
         let mut todo_list: Vec<Task> = Vec::new();
-        let task = Task::new("task".to_string(), "description".to_string(), None);
+        let task = Task::new(
+            "task".to_string(),
+            "description".to_string(),
+            Status::Todo,
+            None,
+        );
         todo_list.push(task);
         run(Vec::from(["list", "task"]), &mut todo_list);
         assert_eq!(todo_list[0].name, "task");
@@ -67,15 +87,25 @@ mod tests {
 
     #[test]
     fn update_status() {
-        let mut task = Task::new("task".to_string(), "description".to_string(), None);
+        let mut task = Task::new(
+            "task".to_string(),
+            "description".to_string(),
+            Status::InProgress,
+            None,
+        );
         task.update_status();
-        assert_eq!(task.completed, true);
+        assert_eq!(task.status, Status::Done);
     }
 
     #[test]
     fn run_edit() {
         let mut todo_list: Vec<Task> = Vec::new();
-        let task = Task::new("task".to_string(), "description".to_string(), None);
+        let task = Task::new(
+            "task".to_string(),
+            "description".to_string(),
+            Status::Todo,
+            None,
+        );
         todo_list.push(task);
         run(
             Vec::from(["edit", "0", "task", "description"]),
@@ -86,41 +116,14 @@ mod tests {
     #[test]
     fn handle_key_event() {
         let mut app = App::default();
-        app.handle_key_event(KeyCode::Right.into()).unwrap();
-        assert_eq!(app.counter, 1);
-
-        app.handle_key_event(KeyCode::Left.into()).unwrap();
-        assert_eq!(app.counter, 0);
-
-        let mut app = App::default();
         app.handle_key_event(KeyCode::Char('q').into()).unwrap();
-        assert_eq!(app.exit, true);
-    }
-
-    #[test]
-    #[should_panic(expected = "attempt to subtract with overflow")]
-    fn handle_key_event_panic() {
-        let mut app = App::default();
-        let _ = app.handle_key_event(KeyCode::Left.into());
-    }
-
-    #[test]
-    fn handle_key_event_overflow() {
-        let mut app = App::default();
-        assert!(app.handle_key_event(KeyCode::Right.into()).is_ok());
-        assert!(app.handle_key_event(KeyCode::Right.into()).is_ok());
-        assert_eq!(
-            app.handle_key_event(KeyCode::Right.into())
-                .unwrap_err()
-                .to_string(),
-            "counter overflow"
-        );
+        assert_eq!(app.should_exit, true);
     }
 
     #[test]
     #[ignore]
     fn render() {
-        let app = App::default();
+        let mut app = App::default();
         let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
 
         app.render(buf.area, &mut buf);

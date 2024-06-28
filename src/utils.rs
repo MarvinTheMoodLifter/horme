@@ -8,8 +8,8 @@ pub fn check_id(id: u16, todo_list: &Vec<Task>) -> bool {
 // Print task
 pub fn print_task(task: &Task) {
     println!(
-        "ID: {} - Name: {}, Description: {}, [Status: {}] Due Date: {}",
-        task.id, task.name, task.description, task.completed, task.due_date
+        "ID: {} - Name: {}, Description: {}, Due Date: {}",
+        task.id, task.name, task.description, task.due_date
     );
 }
 

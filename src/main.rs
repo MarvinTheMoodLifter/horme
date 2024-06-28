@@ -3,19 +3,24 @@ use std::io::{stdin, stdout, Write};
 use color_eyre::Result;
 
 mod app;
-mod errors;
 mod tui;
 
 use app::App;
 use horme::Task;
 
-fn main() -> Result<()> {
-    //let mut todo_list: Vec<Task> = Vec::new();
+fn main() -> io::Result<()> {
     //run_prompt(&mut todo_list);
     errors::install_hooks()?;
     let mut terminal = tui::init()?;
-    App::default().run(&mut terminal)?;
+
+    // Example tasks
+    let tasks = example_tasks();
+
+    let mut app = App::new(tasks);
+
+    app.run(&mut terminal)?;
     tui::restore()?;
+
     Ok(())
 }
 
