@@ -24,19 +24,19 @@ const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier:
 const TEXT_FG_COLOR: Color = SLATE.c200;
 const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
-use crate::Status;
-use crate::Task;
+use crate::task::Status;
+use crate::task::Task;
 
 #[derive(Debug)]
 pub struct App {
-    pub todo_list: TodoList,
-    pub should_exit: bool,
+    todo_list: TodoList,
+    should_exit: bool,
 }
 
 #[derive(Debug, Default)]
 pub struct TodoList {
-    pub state: ListState,
-    pub items: Vec<Task>,
+    state: ListState,
+    items: Vec<Task>,
 }
 
 impl Default for App {
