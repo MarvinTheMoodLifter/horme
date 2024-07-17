@@ -5,7 +5,12 @@
 A simple command-line ToDo list application.<br>
 Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.
 
+>[!caution] Beware!
+>This project is currently in a **pre-alpha state**, meaning it's still under heavy development and many features are missing or in development.<br>
+>Consider this a WIP!
+
 </div>
+
 
 ---
 ## 📦 Install
