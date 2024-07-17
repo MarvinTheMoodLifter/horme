@@ -1,8 +1,8 @@
 <div align="center">
 
-# :amphora: Horme :amphora:
+![Horme Banner](assets/horme-banner.png)
 
-Horme is a simple command-line ToDo list application.<br>
+A simple command-line ToDo list application.<br>
 Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.
 
 </div>

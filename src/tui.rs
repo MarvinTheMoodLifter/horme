@@ -10,6 +10,7 @@ use ratatui::{
     terminal::Terminal,
 };
 
+#[allow(dead_code)]
 pub fn init_error_hooks() -> color_eyre::Result<()> {
     let (panic, error) = HookBuilder::default().into_hooks();
     let panic = panic.into_panic_hook();
@@ -25,6 +26,7 @@ pub fn init_error_hooks() -> color_eyre::Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn init_terminal() -> io::Result<Terminal<impl Backend>> {
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;

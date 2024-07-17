@@ -5,17 +5,18 @@ mod task;
 mod tui;
 
 use app::App;
+use tui::{init_error_hooks, init_terminal, restore_terminal};
 
 fn main() -> Result<()> {
     // run_prompt(&mut todo_list);
     // errors::install_hooks()?;
-    tui::init_error_hooks()?;
-    let terminal = tui::init_terminal()?;
+    init_error_hooks()?;
+    let terminal = init_terminal()?;
 
     let mut app = App::default();
 
     app.run(terminal)?;
-    tui::restore_terminal()?;
+    restore_terminal()?;
 
     Ok(())
 }

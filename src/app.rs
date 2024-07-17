@@ -80,7 +80,7 @@ impl App {
         while !self.should_exit {
             terminal.draw(|f| f.render_widget(&mut *self, f.size()))?;
             if let Event::Key(key) = event::read()? {
-                self.handle_key_event(key);
+                let _ = self.handle_key_event(key);
             };
         }
         Ok(())
