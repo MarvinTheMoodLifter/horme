@@ -1,6 +1,6 @@
 <div align="center">
 
-[<img src="assets/horme-banner.png" width="500">](https://github.com/MarvinTheMoodLifter/horme/wiki)
+<img src="assets/horme-banner.png" width="500" />
 
 A simple command-line ToDo list application.<br>
 *Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.*
