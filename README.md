@@ -3,7 +3,7 @@
 [<img src="assets/horme-banner.png">](https://github.com/MarvinTheMoodLifter/horme/wiki)
 
 A simple command-line ToDo list application.<br>
-Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.
+*Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.*
 
 </div>
 
