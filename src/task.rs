@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU16, Ordering};
 static UNIQUE_ID: AtomicU16 = AtomicU16::new(0);
 
 // Task struct
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Task {
     pub name: String,
     pub description: String,
@@ -15,7 +15,7 @@ pub struct Task {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Status {
     Todo,
-    InProgress,
+    Doing,
     Done,
 }
 
@@ -38,11 +38,27 @@ impl Task {
     }
 
     // update the task status
-    pub fn update_status(&mut self) {
-        match self.status {
-            Status::Todo => self.status = Status::InProgress,
-            Status::InProgress => self.status = Status::Done,
-            Status::Done => self.status = Status::Todo,
-        }
+    pub fn update_status(&mut self, status: Status) {
+        self.status = status;
+    }
+
+    pub fn add_description(&mut self, description: &str) {
+        self.description.push_str(description);
+    }
+
+    pub fn get_id(&self) -> u16 {
+        self.id
+    }
+
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn get_description(&self) -> String {
+        self.description.clone()
+    }
+
+    pub fn get_status(&self) -> Status {
+        self.status
     }
 }

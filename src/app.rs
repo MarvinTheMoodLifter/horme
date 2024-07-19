@@ -30,7 +30,7 @@ use crate::task::Task;
 #[derive(Debug)]
 pub struct App {
     todo_list: TodoList,
-    should_exit: bool,
+    pub should_exit: bool,
 }
 
 #[derive(Debug, Default)]
@@ -44,22 +44,23 @@ impl Default for App {
         Self {
             should_exit: false,
             todo_list: TodoList::from_iter([
-                (Status::Todo, "Rewrite everything with Rust!", "I can't hold my inner voice. He tells me to rewrite the complete universe with Rust"),
-                (Status::Done, "Rewrite all of your tui apps with Ratatui", "Yes, you heard that right. Go and replace your tui with Ratatui."),
-                (Status::Todo, "Pet your cat", "Minnak loves to be pet by you! Don't forget to pet and give some treats!"),
-                (Status::Todo, "Walk with your dog", "Max is bored, go walk with him!"),
-                (Status::Done, "Pay the bills", "Pay the train subscription!!!"),
-                (Status::Done, "Refactor list example", "If you see this info that means I completed this task!"),
+                ("Rewrite everything with Rust!", "I can't hold my inner voice. He tells me to rewrite the complete universe with Rust", Status::Todo),
+                ("Rewrite all of your tui apps with Ratatui", "Yes, you heard that right. Go and replace your tui with Ratatui.", Status::Done),
+                ("Pet your cat", "Minnak loves to be pet by you! Don't forget to pet and give some treats!", Status::Todo),
+                ("Walk with your dog", "Max is bored, go walk with him!", Status::Todo),
+                ("Pay the bills", "Pay the train subscription!!!", Status::Done),
+                ("Refactor list example", "If you see this info that means I completed this task!", Status::Done),
             ]),
         }
     }
 }
 
-impl FromIterator<(Status, &'static str, &'static str)> for TodoList {
-    fn from_iter<I: IntoIterator<Item = (Status, &'static str, &'static str)>>(iter: I) -> Self {
+impl FromIterator<(&'static str, &'static str, Status)> for TodoList {
+    // Create a list of tasks from an iterator
+    fn from_iter<I: IntoIterator<Item = (&'static str, &'static str, Status)>>(iter: I) -> Self {
         let item = iter
             .into_iter()
-            .map(|(status, name, description)| {
+            .map(|(name, description, status)| {
                 Task::new(name.to_string(), description.to_string(), status, None)
             })
             .collect();
@@ -69,9 +70,14 @@ impl FromIterator<(Status, &'static str, &'static str)> for TodoList {
 }
 
 impl App {
-    pub fn new(todo_list: TodoList) -> Self {
+    pub fn new(todo_list: Vec<Task>) -> Self {
+        let state = ListState::default();
+
         Self {
-            todo_list,
+            todo_list: TodoList {
+                state,
+                items: todo_list,
+            },
             should_exit: false,
         }
     }
@@ -118,7 +124,7 @@ impl App {
 
     pub fn toggle_status(&mut self) {
         if let Some(i) = self.todo_list.state.selected() {
-            self.todo_list.items[i].update_status();
+            self.todo_list.items[i].update_status(Status::Done);
         }
     }
 
@@ -194,7 +200,7 @@ impl App {
         let info = if let Some(i) = self.todo_list.state.selected() {
             match self.todo_list.items[i].status {
                 Status::Todo => format!("◇ TODO: {}", self.todo_list.items[i].name),
-                Status::InProgress => format!("◎ IN PROGRESS: {}", self.todo_list.items[i].name),
+                Status::Doing => format!("◎ IN PROGRESS: {}", self.todo_list.items[i].name),
                 Status::Done => format!("✓ DONE: {}", self.todo_list.items[i].name),
             }
         } else {
@@ -231,7 +237,7 @@ impl From<&Task> for ListItem<'_> {
     fn from(value: &Task) -> Self {
         let line = match value.status {
             Status::Todo => Line::styled(format!("◇ {}", value.name), TEXT_FG_COLOR),
-            Status::InProgress => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
+            Status::Doing => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
             Status::Done => Line::styled(format!("✓ {}", value.name), COMPLETED_TEXT_FG_COLOR),
         };
         ListItem::new(line)

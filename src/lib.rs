@@ -86,18 +86,6 @@ mod tests {
     }
 
     #[test]
-    fn update_status() {
-        let mut task = Task::new(
-            "task".to_string(),
-            "description".to_string(),
-            Status::InProgress,
-            None,
-        );
-        task.update_status();
-        assert_eq!(task.status, Status::Done);
-    }
-
-    #[test]
     fn run_edit() {
         let mut todo_list: Vec<Task> = Vec::new();
         let task = Task::new(
