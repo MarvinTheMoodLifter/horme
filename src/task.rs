@@ -49,8 +49,12 @@ impl Task {
     }
 
     // update the task status
-    pub fn update_status(&mut self, status: Status) {
-        self.status = status;
+    pub fn update_status(&mut self) {
+        match self.status {
+            Status::Todo => self.status = Status::Doing,
+            Status::Doing => self.status = Status::Done,
+            Status::Done => self.status = Status::Todo,
+        }
     }
 
     pub fn add_description(&mut self, description: &str) {

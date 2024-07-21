@@ -97,7 +97,7 @@ pub fn complete_task(args: Vec<&str>, todo_list: &mut Vec<Task>) {
         if let Ok(id) = id.parse::<u16>() {
             for task in todo_list.iter_mut() {
                 if task.id == id {
-                    task.update_status(Status::Done);
+                    task.update_status();
                 }
             }
         }

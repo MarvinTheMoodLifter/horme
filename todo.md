@@ -1,15 +1,15 @@
-## Done
-- xmpp
-- Setup VPN at home
+## Todo
+- Certbot via snap
+- nginx via docker
+- Macro Pad
+- Learn SQL
+- radicle
 
 ## Doing
 - Ratatui - Rust TUI
 - forgejo
 
-## Todo
-- Certbot via snap
-- nginx via docker
-- radicle
-- Macro Pad
-- Learn SQL
+## Done
+- xmpp
+- Setup VPN at home
 

@@ -179,7 +179,7 @@ impl App {
 
     pub fn toggle_status(&mut self) {
         if let Some(i) = self.todo_list.state.selected() {
-            self.todo_list.items[i].update_status(Status::Done);
+            self.todo_list.items[i].update_status();
         }
     }
 
