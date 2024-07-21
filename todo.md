@@ -1,9 +1,10 @@
 ## Todo
-- Certbot via snap
 - nginx via docker
 - Macro Pad
 - Learn SQL
 - radicle
+- Setup VPN at home
+- Certbot via snap
 
 ## Doing
 - Ratatui - Rust TUI
@@ -11,5 +12,4 @@
 
 ## Done
 - xmpp
-- Setup VPN at home
 

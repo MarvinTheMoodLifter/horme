@@ -26,28 +26,46 @@ const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
+const YELLOW: Color = BLUE.c400;
 const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
 use crate::task::Status;
 use crate::task::Task;
 
-#[derive(Debug)]
+//#[derive(Debug)]
 pub struct App {
-    todo_list: TodoList,
-    file_path: PathBuf,
-    sections_order: Vec<String>,
+    pub name_input: String,
+    pub description_input: String,
+    pub todo_list: TodoList,
+    pub file_path: PathBuf,
+    pub sections_order: Vec<String>,
     pub should_exit: bool,
+    pub current_screen: CurrentScreen,
+    pub currently_editing: Option<CurrentlyEditing>,
 }
 
 #[derive(Debug, Default)]
 pub struct TodoList {
-    state: ListState,
-    items: Vec<Task>,
+    pub state: ListState,
+    pub items: Vec<Task>,
+}
+
+#[derive(PartialEq)]
+pub enum CurrentScreen {
+    Main,
+    Editing,
+}
+
+pub enum CurrentlyEditing {
+    Name,
+    Description,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
+            name_input: String::new(),
+            description_input: String::new(),
             should_exit: false,
             file_path: Path::new("default.md").to_path_buf(),
             sections_order: vec![
@@ -97,6 +115,8 @@ impl Default for App {
                     Status::Done,
                 ),
             ]),
+            current_screen: CurrentScreen::Main,
+            currently_editing: None,
         }
     }
 }
@@ -120,6 +140,8 @@ impl App {
         let state = ListState::default();
 
         Self {
+            name_input: String::new(),
+            description_input: String::new(),
             todo_list: TodoList {
                 state,
                 items: todo_list,
@@ -131,6 +153,8 @@ impl App {
                 "## Done".to_string(),
             ],
             should_exit: false,
+            current_screen: CurrentScreen::Main,
+            currently_editing: None,
         }
     }
     // runs the application's main loop until the user quits
@@ -145,14 +169,25 @@ impl App {
     }
 
     pub fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
-        match key_event.code {
-            KeyCode::Char('j') => self.select_next(),
-            KeyCode::Char('k') => self.select_previous(),
-            KeyCode::Down => self.select_next(),
-            KeyCode::Up => self.select_previous(),
-            KeyCode::Enter => self.toggle_status(),
-            KeyCode::Char('q') => self.exit(),
-            _ => {}
+        match self.current_screen {
+            CurrentScreen::Main => match key_event.code {
+                KeyCode::Char('j') => self.select_next(),
+                KeyCode::Char('k') => self.select_previous(),
+                KeyCode::Char('c') => self.start_editing(),
+                KeyCode::Down => self.select_next(),
+                KeyCode::Up => self.select_previous(),
+                KeyCode::Enter => self.toggle_status(),
+                KeyCode::Char('q') => self.exit(),
+                _ => {}
+            },
+            CurrentScreen::Editing => match key_event.code {
+                KeyCode::Enter => self.save_edited_task(),
+                KeyCode::Esc => self.cancel_editing(),
+                KeyCode::Tab => self.toggle_editing_field(),
+                KeyCode::Char(c) => self.handle_editing_input(c),
+                KeyCode::Backspace => self.handle_backspace(),
+                _ => {}
+            },
         }
         Ok(())
     }
@@ -217,6 +252,71 @@ impl App {
         }
 
         fs::write(self.file_path.clone(), data).expect("Unable to write file");
+    }
+
+    pub fn toggle_editing(&mut self) {
+        if let Some(edit_mode) = &self.currently_editing {
+            match edit_mode {
+                CurrentlyEditing::Name => self.currently_editing = Some(CurrentlyEditing::Name),
+                CurrentlyEditing::Description => {
+                    self.currently_editing = Some(CurrentlyEditing::Description)
+                }
+            };
+        } else {
+            self.currently_editing = Some(CurrentlyEditing::Name);
+        }
+    }
+
+    fn start_editing(&mut self) {
+        if let Some(i) = self.todo_list.state.selected() {
+            self.name_input = self.todo_list.items[i].name.clone();
+            self.description_input = self.todo_list.items[i].description.clone();
+            self.current_screen = CurrentScreen::Editing;
+            self.currently_editing = Some(CurrentlyEditing::Name);
+        }
+    }
+
+    fn save_edited_task(&mut self) {
+        if let Some(i) = self.todo_list.state.selected() {
+            let task = &mut self.todo_list.items[i];
+            task.name = self.name_input.clone();
+            task.description = self.description_input.clone();
+        }
+        self.current_screen = CurrentScreen::Main;
+        self.currently_editing = None;
+    }
+
+    fn cancel_editing(&mut self) {
+        self.current_screen = CurrentScreen::Main;
+        self.currently_editing = None;
+    }
+
+    fn handle_editing_input(&mut self, c: char) {
+        if let Some(CurrentlyEditing::Name) = self.currently_editing {
+            self.name_input.push(c);
+        } else if let Some(CurrentlyEditing::Description) = self.currently_editing {
+            self.description_input.push(c);
+        }
+    }
+
+    fn handle_backspace(&mut self) {
+        if let Some(CurrentlyEditing::Name) = self.currently_editing {
+            self.name_input.pop();
+        } else if let Some(CurrentlyEditing::Description) = self.currently_editing {
+            self.description_input.pop();
+        }
+    }
+
+    fn toggle_editing_field(&mut self) {
+        match self.currently_editing {
+            Some(CurrentlyEditing::Name) => {
+                self.currently_editing = Some(CurrentlyEditing::Description)
+            }
+            Some(CurrentlyEditing::Description) => {
+                self.currently_editing = Some(CurrentlyEditing::Name)
+            }
+            None => self.currently_editing = Some(CurrentlyEditing::Name),
+        }
     }
 }
 
@@ -283,17 +383,6 @@ impl App {
     }
 
     fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
-        // Get the info depending on the item's state
-        let info = if let Some(i) = self.todo_list.state.selected() {
-            match self.todo_list.items[i].status {
-                Status::Todo => format!("◇ TODO: {}", self.todo_list.items[i].name),
-                Status::Doing => format!("◎ IN PROGRESS: {}", self.todo_list.items[i].name),
-                Status::Done => format!("✓ DONE: {}", self.todo_list.items[i].name),
-            }
-        } else {
-            "No task selected".to_string()
-        };
-
         // Show the list item's info under the list in this paragraph
         let block = Block::new()
             .title(Line::raw("TODO Info").centered())
@@ -303,12 +392,38 @@ impl App {
             .bg(NORMAL_ROW_BG)
             .padding(Padding::horizontal(1));
 
-        // Render the item info
-        Paragraph::new(info)
-            .block(block)
-            .fg(TEXT_FG_COLOR)
-            .wrap(Wrap { trim: false })
-            .render(area, buf);
+        // Check if the user is editing an item
+        if self.current_screen == CurrentScreen::Editing {
+            let input = match self.currently_editing {
+                Some(CurrentlyEditing::Name) => format!("Name: {} ", self.name_input),
+                Some(CurrentlyEditing::Description) => {
+                    format!("Description: {}", self.description_input)
+                }
+                None => "".to_string(),
+            };
+            // Render the item info
+            Paragraph::new(input)
+                .block(block)
+                .fg(YELLOW)
+                .wrap(Wrap { trim: false })
+                .render(area, buf);
+        } else {
+            let info = if let Some(i) = self.todo_list.state.selected() {
+                match self.todo_list.items[i].status {
+                    Status::Todo => format!("◇ TODO: {}", self.todo_list.items[i].name),
+                    Status::Doing => format!("◎ IN PROGRESS: {}", self.todo_list.items[i].name),
+                    Status::Done => format!("✓ DONE: {}", self.todo_list.items[i].name),
+                }
+            } else {
+                "No task selected".to_string()
+            };
+            // Render the item info
+            Paragraph::new(info)
+                .block(block)
+                .fg(TEXT_FG_COLOR)
+                .wrap(Wrap { trim: false })
+                .render(area, buf);
+        }
     }
 }
 
