@@ -135,4 +135,10 @@ mod tests {
         // compare buffers and display the differences in a more readable way
         assert_eq!(buf, expected);
     }
+
+    #[test]
+    fn test_save_todo_list() {
+        let app = App::default();
+        app.save_todo_list();
+    }
 }

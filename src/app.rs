@@ -16,6 +16,10 @@ use ratatui::{
         StatefulWidget, Widget, Wrap,
     },
 };
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
 
 const TODO_HEADER_STYLE: Style = Style::new().fg(SLATE.c100).bg(BLUE.c800);
 const NORMAL_ROW_BG: Color = SLATE.c950;
@@ -30,6 +34,8 @@ use crate::task::Task;
 #[derive(Debug)]
 pub struct App {
     todo_list: TodoList,
+    file_path: PathBuf,
+    sections_order: Vec<String>,
     pub should_exit: bool,
 }
 
@@ -43,13 +49,53 @@ impl Default for App {
     fn default() -> Self {
         Self {
             should_exit: false,
+            file_path: Path::new("default.md").to_path_buf(),
+            sections_order: vec![
+                "## Todo".to_string(),
+                "## Doing".to_string(),
+                "## Done".to_string(),
+            ],
             todo_list: TodoList::from_iter([
-                ("Rewrite everything with Rust!", "I can't hold my inner voice. He tells me to rewrite the complete universe with Rust", Status::Todo),
-                ("Rewrite all of your tui apps with Ratatui", "Yes, you heard that right. Go and replace your tui with Ratatui.", Status::Done),
-                ("Pet your cat", "Minnak loves to be pet by you! Don't forget to pet and give some treats!", Status::Todo),
-                ("Walk with your dog", "Max is bored, go walk with him!", Status::Todo),
-                ("Pay the bills", "Pay the train subscription!!!", Status::Done),
-                ("Refactor list example", "If you see this info that means I completed this task!", Status::Done),
+                (
+                    "Check synthetic eyes",
+                    "Are you sure this isn't a replicant?",
+                    Status::Doing,
+                ),
+                (
+                    "Investigate Tyrell Corporation",
+                    "The secrets they're hiding...",
+                    Status::Todo,
+                ),
+                (
+                    "Complete the Dragonborn questline",
+                    "You have what it takes to save Tamriel!",
+                    Status::Done,
+                ),
+                (
+                    "Kill as many dragons as possible",
+                    "Those fire-breathers need puttin' down!",
+                    Status::Todo,
+                ),
+                (
+                    "Take a break, dude",
+                    "Life's too short for bowling alleys and White Russians.",
+                    Status::Todo,
+                ),
+                (
+                    "Find the missing rug",
+                    "Man, that rug really tied the room together...",
+                    Status::Done,
+                ),
+                (
+                    "Visit the planet Frogstar World B",
+                    "A great place for a holiday... or so I've heard.",
+                    Status::Todo,
+                ),
+                (
+                    "Don't forget your towel",
+                    "You never know when you might need it!",
+                    Status::Done,
+                ),
             ]),
         }
     }
@@ -70,7 +116,7 @@ impl FromIterator<(&'static str, &'static str, Status)> for TodoList {
 }
 
 impl App {
-    pub fn new(todo_list: Vec<Task>) -> Self {
+    pub fn new(todo_list: Vec<Task>, file_path: &Path) -> Self {
         let state = ListState::default();
 
         Self {
@@ -78,6 +124,12 @@ impl App {
                 state,
                 items: todo_list,
             },
+            file_path: file_path.to_path_buf(),
+            sections_order: vec![
+                "## Todo".to_string(),
+                "## Doing".to_string(),
+                "## Done".to_string(),
+            ],
             should_exit: false,
         }
     }
@@ -96,6 +148,9 @@ impl App {
         match key_event.code {
             KeyCode::Char('j') => self.select_next(),
             KeyCode::Char('k') => self.select_previous(),
+            KeyCode::Down => self.select_next(),
+            KeyCode::Up => self.select_previous(),
+            KeyCode::Enter => self.toggle_status(),
             KeyCode::Char('q') => self.exit(),
             _ => {}
         }
@@ -129,7 +184,39 @@ impl App {
     }
 
     pub fn exit(&mut self) {
+        self.save_todo_list();
         self.should_exit = true;
+    }
+
+    pub fn save_todo_list(&self) {
+        // Generate the data from the list of tasks
+        let mut data = String::new();
+        let mut sections = HashMap::<String, Vec<Task>>::new();
+
+        for section in &self.sections_order {
+            if !sections.contains_key(section) {
+                sections.insert(section.to_string(), vec![]);
+            }
+        }
+
+        for task in &self.todo_list.items {
+            let section = match task.status {
+                Status::Todo => "## Todo",
+                Status::Doing => "## Doing",
+                Status::Done => "## Done",
+            };
+            sections.get_mut(section).unwrap().push(task.clone());
+        }
+
+        for section in &self.sections_order {
+            data.push_str(&format!("{}\n", section));
+            for task in sections.get(section).unwrap() {
+                data.push_str(&format!("- {}\n", task.name));
+            }
+            data.push_str("\n");
+        }
+
+        fs::write(self.file_path.clone(), data).expect("Unable to write file");
     }
 }
 

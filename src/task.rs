@@ -1,4 +1,5 @@
 // Atomic U16 is used to generate unique IDs
+use std::fmt::Display;
 use std::sync::atomic::{AtomicU16, Ordering};
 static UNIQUE_ID: AtomicU16 = AtomicU16::new(0);
 
@@ -17,6 +18,16 @@ pub enum Status {
     Todo,
     Doing,
     Done,
+}
+
+impl Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Status::Todo => write!(f, "Todo"),
+            Status::Doing => write!(f, "Doing"),
+            Status::Done => write!(f, "Done"),
+        }
+    }
 }
 
 impl Task {
