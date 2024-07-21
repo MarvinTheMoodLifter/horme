@@ -1,9 +1,10 @@
 // Atomic U16 is used to generate unique IDs
+use std::fmt::Display;
 use std::sync::atomic::{AtomicU16, Ordering};
 static UNIQUE_ID: AtomicU16 = AtomicU16::new(0);
 
 // Task struct
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, serde::Serialize)]
 pub struct Task {
     pub name: String,
     pub description: String,
@@ -12,11 +13,21 @@ pub struct Task {
     pub due_date: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
 pub enum Status {
     Todo,
-    InProgress,
+    Doing,
     Done,
+}
+
+impl Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Status::Todo => write!(f, "Todo"),
+            Status::Doing => write!(f, "Doing"),
+            Status::Done => write!(f, "Done"),
+        }
+    }
 }
 
 impl Task {
@@ -40,9 +51,29 @@ impl Task {
     // update the task status
     pub fn update_status(&mut self) {
         match self.status {
-            Status::Todo => self.status = Status::InProgress,
-            Status::InProgress => self.status = Status::Done,
+            Status::Todo => self.status = Status::Doing,
+            Status::Doing => self.status = Status::Done,
             Status::Done => self.status = Status::Todo,
         }
+    }
+
+    pub fn add_description(&mut self, description: &str) {
+        self.description.push_str(description);
+    }
+
+    pub fn get_id(&self) -> u16 {
+        self.id
+    }
+
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn get_description(&self) -> String {
+        self.description.clone()
+    }
+
+    pub fn get_status(&self) -> Status {
+        self.status
     }
 }

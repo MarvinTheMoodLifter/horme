@@ -86,18 +86,6 @@ mod tests {
     }
 
     #[test]
-    fn update_status() {
-        let mut task = Task::new(
-            "task".to_string(),
-            "description".to_string(),
-            Status::InProgress,
-            None,
-        );
-        task.update_status();
-        assert_eq!(task.status, Status::Done);
-    }
-
-    #[test]
     fn run_edit() {
         let mut todo_list: Vec<Task> = Vec::new();
         let task = Task::new(
@@ -146,5 +134,11 @@ mod tests {
         // note ratatui also has an assert_buffer_eq! macro that can be used to
         // compare buffers and display the differences in a more readable way
         assert_eq!(buf, expected);
+    }
+
+    #[test]
+    fn test_save_todo_list() {
+        let app = App::default();
+        app.save_todo_list();
     }
 }

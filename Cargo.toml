@@ -1,6 +1,6 @@
 [package]
 name = "horme"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Marco Perin <marvin.themoodlifter@proton.me>"]
 edition = "2021"
 
@@ -8,3 +8,6 @@ edition = "2021"
 color-eyre = "0.6.3"
 crossterm = "0.27.0"
 ratatui = "0.27.0"
+regex = "1.10.5"
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.120"

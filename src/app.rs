@@ -16,50 +16,117 @@ use ratatui::{
         StatefulWidget, Widget, Wrap,
     },
 };
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
 
 const TODO_HEADER_STYLE: Style = Style::new().fg(SLATE.c100).bg(BLUE.c800);
 const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
+const YELLOW: Color = BLUE.c400;
 const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
 use crate::task::Status;
 use crate::task::Task;
 
-#[derive(Debug)]
+//#[derive(Debug)]
 pub struct App {
-    todo_list: TodoList,
-    should_exit: bool,
+    pub name_input: String,
+    pub description_input: String,
+    pub todo_list: TodoList,
+    pub file_path: PathBuf,
+    pub sections_order: Vec<String>,
+    pub should_exit: bool,
+    pub current_screen: CurrentScreen,
+    pub currently_editing: Option<CurrentlyEditing>,
 }
 
 #[derive(Debug, Default)]
 pub struct TodoList {
-    state: ListState,
-    items: Vec<Task>,
+    pub state: ListState,
+    pub items: Vec<Task>,
+}
+
+#[derive(PartialEq)]
+pub enum CurrentScreen {
+    Main,
+    Editing,
+}
+
+pub enum CurrentlyEditing {
+    Name,
+    Description,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
+            name_input: String::new(),
+            description_input: String::new(),
             should_exit: false,
+            file_path: Path::new("default.md").to_path_buf(),
+            sections_order: vec![
+                "## Todo".to_string(),
+                "## Doing".to_string(),
+                "## Done".to_string(),
+            ],
             todo_list: TodoList::from_iter([
-                (Status::Todo, "Rewrite everything with Rust!", "I can't hold my inner voice. He tells me to rewrite the complete universe with Rust"),
-                (Status::Done, "Rewrite all of your tui apps with Ratatui", "Yes, you heard that right. Go and replace your tui with Ratatui."),
-                (Status::Todo, "Pet your cat", "Minnak loves to be pet by you! Don't forget to pet and give some treats!"),
-                (Status::Todo, "Walk with your dog", "Max is bored, go walk with him!"),
-                (Status::Done, "Pay the bills", "Pay the train subscription!!!"),
-                (Status::Done, "Refactor list example", "If you see this info that means I completed this task!"),
+                (
+                    "Check synthetic eyes",
+                    "Are you sure this isn't a replicant?",
+                    Status::Doing,
+                ),
+                (
+                    "Investigate Tyrell Corporation",
+                    "The secrets they're hiding...",
+                    Status::Todo,
+                ),
+                (
+                    "Complete the Dragonborn questline",
+                    "You have what it takes to save Tamriel!",
+                    Status::Done,
+                ),
+                (
+                    "Kill as many dragons as possible",
+                    "Those fire-breathers need puttin' down!",
+                    Status::Todo,
+                ),
+                (
+                    "Take a break, dude",
+                    "Life's too short for bowling alleys and White Russians.",
+                    Status::Todo,
+                ),
+                (
+                    "Find the missing rug",
+                    "Man, that rug really tied the room together...",
+                    Status::Done,
+                ),
+                (
+                    "Visit the planet Frogstar World B",
+                    "A great place for a holiday... or so I've heard.",
+                    Status::Todo,
+                ),
+                (
+                    "Don't forget your towel",
+                    "You never know when you might need it!",
+                    Status::Done,
+                ),
             ]),
+            current_screen: CurrentScreen::Main,
+            currently_editing: None,
         }
     }
 }
 
-impl FromIterator<(Status, &'static str, &'static str)> for TodoList {
-    fn from_iter<I: IntoIterator<Item = (Status, &'static str, &'static str)>>(iter: I) -> Self {
+impl FromIterator<(&'static str, &'static str, Status)> for TodoList {
+    // Create a list of tasks from an iterator
+    fn from_iter<I: IntoIterator<Item = (&'static str, &'static str, Status)>>(iter: I) -> Self {
         let item = iter
             .into_iter()
-            .map(|(status, name, description)| {
+            .map(|(name, description, status)| {
                 Task::new(name.to_string(), description.to_string(), status, None)
             })
             .collect();
@@ -69,10 +136,25 @@ impl FromIterator<(Status, &'static str, &'static str)> for TodoList {
 }
 
 impl App {
-    pub fn new(todo_list: TodoList) -> Self {
+    pub fn new(todo_list: Vec<Task>, file_path: &Path) -> Self {
+        let state = ListState::default();
+
         Self {
-            todo_list,
+            name_input: String::new(),
+            description_input: String::new(),
+            todo_list: TodoList {
+                state,
+                items: todo_list,
+            },
+            file_path: file_path.to_path_buf(),
+            sections_order: vec![
+                "## Todo".to_string(),
+                "## Doing".to_string(),
+                "## Done".to_string(),
+            ],
             should_exit: false,
+            current_screen: CurrentScreen::Main,
+            currently_editing: None,
         }
     }
     // runs the application's main loop until the user quits
@@ -87,11 +169,25 @@ impl App {
     }
 
     pub fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
-        match key_event.code {
-            KeyCode::Char('j') => self.select_next(),
-            KeyCode::Char('k') => self.select_previous(),
-            KeyCode::Char('q') => self.exit(),
-            _ => {}
+        match self.current_screen {
+            CurrentScreen::Main => match key_event.code {
+                KeyCode::Char('j') => self.select_next(),
+                KeyCode::Char('k') => self.select_previous(),
+                KeyCode::Char('c') => self.start_editing(),
+                KeyCode::Down => self.select_next(),
+                KeyCode::Up => self.select_previous(),
+                KeyCode::Enter => self.toggle_status(),
+                KeyCode::Char('q') => self.exit(),
+                _ => {}
+            },
+            CurrentScreen::Editing => match key_event.code {
+                KeyCode::Enter => self.save_edited_task(),
+                KeyCode::Esc => self.cancel_editing(),
+                KeyCode::Tab => self.toggle_editing_field(),
+                KeyCode::Char(c) => self.handle_editing_input(c),
+                KeyCode::Backspace => self.handle_backspace(),
+                _ => {}
+            },
         }
         Ok(())
     }
@@ -123,7 +219,104 @@ impl App {
     }
 
     pub fn exit(&mut self) {
+        self.save_todo_list();
         self.should_exit = true;
+    }
+
+    pub fn save_todo_list(&self) {
+        // Generate the data from the list of tasks
+        let mut data = String::new();
+        let mut sections = HashMap::<String, Vec<Task>>::new();
+
+        for section in &self.sections_order {
+            if !sections.contains_key(section) {
+                sections.insert(section.to_string(), vec![]);
+            }
+        }
+
+        for task in &self.todo_list.items {
+            let section = match task.status {
+                Status::Todo => "## Todo",
+                Status::Doing => "## Doing",
+                Status::Done => "## Done",
+            };
+            sections.get_mut(section).unwrap().push(task.clone());
+        }
+
+        for section in &self.sections_order {
+            data.push_str(&format!("{}\n", section));
+            for task in sections.get(section).unwrap() {
+                data.push_str(&format!("- {}\n", task.name));
+            }
+            data.push_str("\n");
+        }
+
+        fs::write(self.file_path.clone(), data).expect("Unable to write file");
+    }
+
+    pub fn toggle_editing(&mut self) {
+        if let Some(edit_mode) = &self.currently_editing {
+            match edit_mode {
+                CurrentlyEditing::Name => self.currently_editing = Some(CurrentlyEditing::Name),
+                CurrentlyEditing::Description => {
+                    self.currently_editing = Some(CurrentlyEditing::Description)
+                }
+            };
+        } else {
+            self.currently_editing = Some(CurrentlyEditing::Name);
+        }
+    }
+
+    fn start_editing(&mut self) {
+        if let Some(i) = self.todo_list.state.selected() {
+            self.name_input = self.todo_list.items[i].name.clone();
+            self.description_input = self.todo_list.items[i].description.clone();
+            self.current_screen = CurrentScreen::Editing;
+            self.currently_editing = Some(CurrentlyEditing::Name);
+        }
+    }
+
+    fn save_edited_task(&mut self) {
+        if let Some(i) = self.todo_list.state.selected() {
+            let task = &mut self.todo_list.items[i];
+            task.name = self.name_input.clone();
+            task.description = self.description_input.clone();
+        }
+        self.current_screen = CurrentScreen::Main;
+        self.currently_editing = None;
+    }
+
+    fn cancel_editing(&mut self) {
+        self.current_screen = CurrentScreen::Main;
+        self.currently_editing = None;
+    }
+
+    fn handle_editing_input(&mut self, c: char) {
+        if let Some(CurrentlyEditing::Name) = self.currently_editing {
+            self.name_input.push(c);
+        } else if let Some(CurrentlyEditing::Description) = self.currently_editing {
+            self.description_input.push(c);
+        }
+    }
+
+    fn handle_backspace(&mut self) {
+        if let Some(CurrentlyEditing::Name) = self.currently_editing {
+            self.name_input.pop();
+        } else if let Some(CurrentlyEditing::Description) = self.currently_editing {
+            self.description_input.pop();
+        }
+    }
+
+    fn toggle_editing_field(&mut self) {
+        match self.currently_editing {
+            Some(CurrentlyEditing::Name) => {
+                self.currently_editing = Some(CurrentlyEditing::Description)
+            }
+            Some(CurrentlyEditing::Description) => {
+                self.currently_editing = Some(CurrentlyEditing::Name)
+            }
+            None => self.currently_editing = Some(CurrentlyEditing::Name),
+        }
     }
 }
 
@@ -190,17 +383,6 @@ impl App {
     }
 
     fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
-        // Get the info depending on the item's state
-        let info = if let Some(i) = self.todo_list.state.selected() {
-            match self.todo_list.items[i].status {
-                Status::Todo => format!("◇ TODO: {}", self.todo_list.items[i].name),
-                Status::InProgress => format!("◎ IN PROGRESS: {}", self.todo_list.items[i].name),
-                Status::Done => format!("✓ DONE: {}", self.todo_list.items[i].name),
-            }
-        } else {
-            "No task selected".to_string()
-        };
-
         // Show the list item's info under the list in this paragraph
         let block = Block::new()
             .title(Line::raw("TODO Info").centered())
@@ -210,12 +392,38 @@ impl App {
             .bg(NORMAL_ROW_BG)
             .padding(Padding::horizontal(1));
 
-        // Render the item info
-        Paragraph::new(info)
-            .block(block)
-            .fg(TEXT_FG_COLOR)
-            .wrap(Wrap { trim: false })
-            .render(area, buf);
+        // Check if the user is editing an item
+        if self.current_screen == CurrentScreen::Editing {
+            let input = match self.currently_editing {
+                Some(CurrentlyEditing::Name) => format!("Name: {} ", self.name_input),
+                Some(CurrentlyEditing::Description) => {
+                    format!("Description: {}", self.description_input)
+                }
+                None => "".to_string(),
+            };
+            // Render the item info
+            Paragraph::new(input)
+                .block(block)
+                .fg(YELLOW)
+                .wrap(Wrap { trim: false })
+                .render(area, buf);
+        } else {
+            let info = if let Some(i) = self.todo_list.state.selected() {
+                match self.todo_list.items[i].status {
+                    Status::Todo => format!("◇ TODO: {}", self.todo_list.items[i].name),
+                    Status::Doing => format!("◎ IN PROGRESS: {}", self.todo_list.items[i].name),
+                    Status::Done => format!("✓ DONE: {}", self.todo_list.items[i].name),
+                }
+            } else {
+                "No task selected".to_string()
+            };
+            // Render the item info
+            Paragraph::new(info)
+                .block(block)
+                .fg(TEXT_FG_COLOR)
+                .wrap(Wrap { trim: false })
+                .render(area, buf);
+        }
     }
 }
 
@@ -231,7 +439,7 @@ impl From<&Task> for ListItem<'_> {
     fn from(value: &Task) -> Self {
         let line = match value.status {
             Status::Todo => Line::styled(format!("◇ {}", value.name), TEXT_FG_COLOR),
-            Status::InProgress => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
+            Status::Doing => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
             Status::Done => Line::styled(format!("✓ {}", value.name), COMPLETED_TEXT_FG_COLOR),
         };
         ListItem::new(line)

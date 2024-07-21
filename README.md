@@ -12,23 +12,6 @@ A simple command-line ToDo list application.<br>
 > Consider this a WIP!
 
 ---
-## 📦 Install
-To build and run Horme, make sure you have Rust installed on your system. [Here](https://www.rust-lang.org/tools/install) you can find the official guide to install the toolchain.
-
-Then, clone this repository and navigate to the project directory:
-```bash
-git clone https://github.com/MarvinTheMoodLifter/horme.git
-cd horme
-
-cargo build --release
-```
-
-Once built, you can find the executable binary in the "target/release" directory.
-You run the program by executing the binary:
-```bash
-./target/release/horme
-```
-
 ## 💠 Features
 - `Add`: Add a new task to the todo list. You can specify the name and description of the task.
 - `List`: Display the list of tasks. You can optionally filter tasks by completion status, due date, or overdue status.
@@ -46,3 +29,19 @@ You run the program by executing the binary:
 * [ ] Add support for persisting tasks between sessions, e.g., using a file or a database.
 * [ ] Improve error handling and user input validation for robustness and user-friendliness.
 
+## 📦 Install
+To build and run Horme, make sure you have Rust installed on your system. [Here](https://www.rust-lang.org/tools/install) you can find the official guide to install the toolchain.
+
+Then, clone this repository and navigate to the project directory:
+```bash
+git clone https://github.com/MarvinTheMoodLifter/horme.git
+cd horme
+
+cargo build --release
+```
+
+Once built, you can find the executable binary in the "target/release" directory.
+You run the program by executing the binary:
+```bash
+./target/release/horme
+```
