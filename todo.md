@@ -11,6 +11,5 @@
 - forgejo
 
 ## Done
-- culo
 - xmpp
 

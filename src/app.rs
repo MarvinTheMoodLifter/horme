@@ -1,5 +1,6 @@
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use strum::{Display, EnumIter, FromRepr};
 
 use ratatui::{
     backend::Backend,
@@ -9,10 +10,7 @@ use ratatui::{
     symbols,
     terminal::Terminal,
     text::Line,
-    widgets::{
-        Block, Borders, HighlightSpacing, List, ListItem, ListState, Padding, Paragraph,
-        StatefulWidget, Widget, Wrap,
-    },
+    widgets::*,
 };
 
 use std::{
@@ -42,12 +40,13 @@ use crate::task::Task;
 
 //#[derive(Debug)]
 pub struct App {
+    state: AppState,
+    selected_tab: SelectedTab,
     pub name_input: String,
     pub description_input: String,
     pub todo_list: TodoList,
     pub file_path: PathBuf,
     pub sections_order: Vec<String>,
-    pub should_exit: bool,
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
 }
@@ -71,12 +70,31 @@ pub enum CurrentlyEditing {
     Description,
 }
 
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+enum AppState {
+    #[default]
+    Running,
+    Quitting,
+}
+
+#[derive(Default, Clone, Copy, Display, FromRepr, EnumIter)]
+enum SelectedTab {
+    #[default]
+    #[strum(to_string = "Todo")]
+    Todo,
+    #[strum(to_string = "Doing")]
+    Doing,
+    #[strum(to_string = "Done")]
+    Done,
+}
+
 impl Default for App {
     fn default() -> Self {
         Self {
+            state: AppState::Running,
+            selected_tab: SelectedTab::Todo,
             name_input: String::new(),
             description_input: String::new(),
-            should_exit: false,
             file_path: Path::new("default.md").to_path_buf(),
             sections_order: vec![
                 "## Todo".to_string(),
@@ -150,6 +168,8 @@ impl App {
         let state = ListState::default();
 
         Self {
+            state: AppState::Running,
+            selected_tab: SelectedTab::Todo,
             name_input: String::new(),
             description_input: String::new(),
             todo_list: TodoList {
@@ -162,14 +182,13 @@ impl App {
                 "## Doing".to_string(),
                 "## Done".to_string(),
             ],
-            should_exit: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,
         }
     }
     // runs the application's main loop until the user quits
     pub fn run(&mut self, mut terminal: Terminal<impl Backend>) -> Result<()> {
-        while !self.should_exit {
+        while self.state == AppState::Running {
             terminal.draw(|f| f.render_widget(&mut *self, f.size()))?;
             if let Event::Key(key) = event::read()? {
                 let _ = self.handle_key_event(key);
@@ -183,13 +202,17 @@ impl App {
             CurrentScreen::Main => match key_event.code {
                 KeyCode::Char('j') => self.select_next(),
                 KeyCode::Char('k') => self.select_previous(),
+                KeyCode::Char('l') => self.next_tab(),
+                KeyCode::Char('h') => self.previous_tab(),
+                KeyCode::Down => self.select_next(),
+                KeyCode::Up => self.select_previous(),
+                KeyCode::Right => self.next_tab(),
+                KeyCode::Left => self.previous_tab(),
                 KeyCode::Char('c') => self.start_editing(),
                 KeyCode::Char('a') => self.start_adding(),
                 KeyCode::Char('d') => self.start_deleting(),
-                KeyCode::Down => self.select_next(),
-                KeyCode::Up => self.select_previous(),
                 KeyCode::Enter => self.toggle_status(),
-                KeyCode::Char('q') => self.exit(),
+                KeyCode::Char('q') => self.quit(),
                 _ => {}
             },
             CurrentScreen::Editing => match key_event.code {
@@ -229,6 +252,14 @@ impl App {
         self.todo_list.state.select_previous();
     }
 
+    pub fn next_tab(&mut self) {
+        self.selected_tab = self.selected_tab.next();
+    }
+
+    pub fn previous_tab(&mut self) {
+        self.selected_tab = self.selected_tab.previous();
+    }
+
     pub fn select_first(&mut self) {
         self.todo_list.state.select_first();
     }
@@ -243,9 +274,9 @@ impl App {
         }
     }
 
-    pub fn exit(&mut self) {
+    pub fn quit(&mut self) {
         self.save_todo_list();
-        self.should_exit = true;
+        self.state = AppState::Quitting;
     }
 
     pub fn save_todo_list(&self) {
@@ -384,17 +415,40 @@ impl Widget for &mut App {
 
         let [list_area, item_area] =
             Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
-        App::render_header(header_area, buf);
+        self.render_header(header_area, buf);
         App::render_footer(footer_area, buf);
         self.render_list(list_area, buf);
         self.render_selected_item(item_area, buf);
     }
 }
 
+impl SelectedTab {
+    fn previous(self) -> Self {
+        let current_index: usize = self as usize;
+        let previous_index = current_index.saturating_sub(1);
+        Self::from_repr(previous_index).unwrap_or(self)
+    }
+    fn next(self) -> Self {
+        let current_index = self as usize;
+        let next_index = current_index.saturating_add(1);
+        Self::from_repr(next_index).unwrap_or(self)
+    }
+}
+
+impl From<SelectedTab> for String {
+    fn from(tab: SelectedTab) -> Self {
+        tab.to_string()
+    }
+}
+
 // Rendering logic for the app
 impl App {
-    fn render_header(area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Horme").bold().centered().render(area, buf);
+    fn render_header(&mut self, area: Rect, buf: &mut Buffer) {
+        let tab_name = self.selected_tab.to_string();
+        Paragraph::new(format!("Horme - {}", tab_name))
+            .bold()
+            .centered()
+            .render(area, buf);
     }
 
     fn render_footer(area: Rect, buf: &mut Buffer) {

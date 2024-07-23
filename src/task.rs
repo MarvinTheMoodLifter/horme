@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU16, Ordering};
 static UNIQUE_ID: AtomicU16 = AtomicU16::new(0);
 
 // Task struct
-#[derive(Debug, PartialEq, Clone, serde::Serialize)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Task {
     pub name: String,
     pub description: String,
@@ -13,7 +13,7 @@ pub struct Task {
     pub due_date: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Status {
     Todo,
     Doing,
