@@ -27,6 +27,7 @@ A simple command-line ToDo list application.<br>
 
 ## 🧪 Upcoming
 * [ ] Add a new task. You can specify the name and description of the task
+* [ ] Help overlay
 * [ ] Delete a task
 * [ ] Tasks deadlines
 * [ ] Filter tasks by completion status, due date, and overdue status
