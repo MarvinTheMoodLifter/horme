@@ -21,14 +21,16 @@ A simple command-line ToDo list application.<br>
 - TUI ([Ratatui](https://ratatui.rs))
 - Vim keys
 - Display the to-do list
+- Add new tasks
+- Delete tasks
 - Edit tasks name and description
 - Mark tasks as to-do, in progress or done
 - Save and load your to-do list in markdown format for easy access and sharing
 
 ## 🧪 Upcoming
-* [ ] Add a new task. You can specify the name and description of the task
+* [x] Add a new task. You can specify the name and description of the task
 * [ ] Help overlay
-* [ ] Delete a task
+* [x] Delete a task
 * [ ] Tasks deadlines
 * [ ] Filter tasks by completion status, due date, and overdue status
 * [ ] Divide the tasks into user defined categories
@@ -50,7 +52,7 @@ cd horme
 cargo build --release
 ```
 
-Once built, you can find the executable binary in the "target/release" directory.
+Once built, you can find the executable binary in the `target/release` directory.
 Just execute the binary:
 
 ```bash
