@@ -1,13 +1,11 @@
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+
 use ratatui::{
     backend::Backend,
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{
-        palette::tailwind::{BLUE, GREEN, SLATE},
-        Color, Modifier, Style, Stylize,
-    },
+    style::{palette::tailwind::*, Color, Modifier, Style, Stylize},
     symbols,
     terminal::Terminal,
     text::Line,
@@ -16,18 +14,27 @@ use ratatui::{
         StatefulWidget, Widget, Wrap,
     },
 };
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
 
-const TODO_HEADER_STYLE: Style = Style::new().fg(SLATE.c100).bg(BLUE.c800);
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
+
+const TODO_HEADER_STYLE: Style = Style::new()
+    .fg(SLATE.c800)
+    .bg(AMBER.c400)
+    .add_modifier(Modifier::BOLD);
 const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
-const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
+const SELECTED_STYLE: Style = Style::new()
+    .fg(SLATE.c900)
+    .bg(AMBER.c200)
+    .add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
-const TEXT_FG_EDITING: Color = BLUE.c400;
+const TEXT_FG_EDITING: Color = AMBER.c400;
 const TEXT_FG_ADDING: Color = GREEN.c400;
+const TEXT_FG_DELETING: Color = RED.c400;
 const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
 use crate::task::Status;
@@ -376,7 +383,7 @@ impl Widget for &mut App {
         .areas(area);
 
         let [list_area, item_area] =
-            Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
+            Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
         App::render_header(header_area, buf);
         App::render_footer(footer_area, buf);
         self.render_list(list_area, buf);
@@ -391,9 +398,11 @@ impl App {
     }
 
     fn render_footer(area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Press j/k to select, q to quit")
-            .centered()
-            .render(area, buf);
+        Paragraph::new(
+            "Press j/k to select, a to add new task, Enter to edit, d to delete, q to quit",
+        )
+        .centered()
+        .render(area, buf);
     }
 
     // Iterate through the list of tasks and render them
@@ -431,7 +440,7 @@ impl App {
     fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
         // Show the list item's info under the list in this paragraph
         let block = Block::new()
-            .title(Line::raw("TODO Info").centered())
+            .title(Line::raw("Info").centered())
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
             .border_style(TODO_HEADER_STYLE)
@@ -479,7 +488,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(TEXT_FG_EDITING)
+                    .fg(TEXT_FG_DELETING)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }

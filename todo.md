@@ -1,16 +1,16 @@
 ## Todo
 - nginx via docker
 - Learn SQL
-- radicle
-    > peer to peer git model
 - Setup VPN at home
 - Certbot via snap
-- culo
 
 ## Doing
+- radicle
+    > peer to peer git model
 - Ratatui - Rust TUI
 - forgejo
 
 ## Done
+- culo
 - xmpp
 
