@@ -1,12 +1,15 @@
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
-use strum::{Display, EnumIter, FromRepr};
+use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
 
 use ratatui::{
     backend::Backend,
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{palette::tailwind::*, Color, Modifier, Style, Stylize},
+    style::{
+        palette::tailwind::{self, *},
+        Color, Modifier, Style, Stylize,
+    },
     symbols,
     terminal::Terminal,
     text::Line,
@@ -40,7 +43,7 @@ use crate::task::Task;
 
 //#[derive(Debug)]
 pub struct App {
-    state: AppState,
+    app_state: AppState,
     selected_tab: SelectedTab,
     pub name_input: String,
     pub description_input: String,
@@ -91,7 +94,7 @@ enum SelectedTab {
 impl Default for App {
     fn default() -> Self {
         Self {
-            state: AppState::Running,
+            app_state: AppState::Running,
             selected_tab: SelectedTab::Todo,
             name_input: String::new(),
             description_input: String::new(),
@@ -168,7 +171,7 @@ impl App {
         let state = ListState::default();
 
         Self {
-            state: AppState::Running,
+            app_state: AppState::Running,
             selected_tab: SelectedTab::Todo,
             name_input: String::new(),
             description_input: String::new(),
@@ -188,7 +191,7 @@ impl App {
     }
     // runs the application's main loop until the user quits
     pub fn run(&mut self, mut terminal: Terminal<impl Backend>) -> Result<()> {
-        while self.state == AppState::Running {
+        while self.app_state == AppState::Running {
             terminal.draw(|f| f.render_widget(&mut *self, f.size()))?;
             if let Event::Key(key) = event::read()? {
                 let _ = self.handle_key_event(key);
@@ -276,7 +279,7 @@ impl App {
 
     pub fn quit(&mut self) {
         self.save_todo_list();
-        self.state = AppState::Quitting;
+        self.app_state = AppState::Quitting;
     }
 
     pub fn save_todo_list(&self) {
@@ -414,7 +417,7 @@ impl Widget for &mut App {
         .areas(area);
 
         let [list_area, item_area] =
-            Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
+            Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
         self.render_header(header_area, buf);
         App::render_footer(footer_area, buf);
         self.render_list(list_area, buf);

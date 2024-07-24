@@ -1,5 +1,4 @@
 mod app;
-mod errors;
 mod run;
 mod task;
 mod tui;
@@ -99,46 +98,5 @@ mod tests {
             Vec::from(["edit", "0", "task", "description"]),
             &mut todo_list,
         );
-    }
-
-    #[test]
-    fn handle_key_event() {
-        let mut app = App::default();
-        app.handle_key_event(KeyCode::Char('q').into()).unwrap();
-        assert_eq!(app.should_exit, true);
-    }
-
-    #[test]
-    #[ignore]
-    fn render() {
-        let mut app = App::default();
-        let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
-
-        app.render(buf.area, &mut buf);
-
-        let mut expected = Buffer::with_lines(vec![
-            "┏━━━━━━━━━━━━━━━━━━━━ Horme ━━━━━━━━━━━━━━━━━━━━━┓",
-            "┃                    Value: 0                    ┃",
-            "┃                                                ┃",
-            "┗━ Decrement <Left> Increment <Right> Quit <Q> ━━┛",
-        ]);
-        let title_style = Style::new().bold();
-        let counter_style = Style::new().yellow();
-        let key_style = Style::new().blue().bold();
-        expected.set_style(Rect::new(21, 0, 7, 1), title_style);
-        expected.set_style(Rect::new(28, 1, 1, 1), counter_style);
-        expected.set_style(Rect::new(13, 3, 6, 1), key_style);
-        expected.set_style(Rect::new(30, 3, 7, 1), key_style);
-        expected.set_style(Rect::new(43, 3, 4, 1), key_style);
-
-        // note ratatui also has an assert_buffer_eq! macro that can be used to
-        // compare buffers and display the differences in a more readable way
-        assert_eq!(buf, expected);
-    }
-
-    #[test]
-    fn test_save_todo_list() {
-        let app = App::default();
-        app.save_todo_list();
     }
 }
