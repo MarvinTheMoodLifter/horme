@@ -1,19 +1,18 @@
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
-use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
 
 use ratatui::{
     backend::Backend,
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{
-        palette::tailwind::{self, *},
-        Color, Modifier, Style, Stylize,
-    },
+    style::{palette::tailwind::*, Color, Modifier, Style, Stylize},
     symbols,
     terminal::Terminal,
     text::Line,
-    widgets::*,
+    widgets::{
+        Block, Borders, HighlightSpacing, List, ListItem, ListState, Padding, Paragraph,
+        StatefulWidget, Widget, Wrap,
+    },
 };
 
 use std::{
@@ -28,11 +27,10 @@ const TODO_HEADER_STYLE: Style = Style::new()
     .add_modifier(Modifier::BOLD);
 const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
-const SELECTED_STYLE: Style = Style::new()
-    .fg(SLATE.c900)
-    .bg(AMBER.c200)
-    .add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
+const TODO_FG_COLOR: Color = AMBER.c500;
+const DOING_FG_COLOR: Color = GREEN.c500;
+const DONE_FG_COLOR: Color = SLATE.c500;
 const TEXT_FG_EDITING: Color = AMBER.c400;
 const TEXT_FG_ADDING: Color = GREEN.c400;
 const TEXT_FG_DELETING: Color = RED.c400;
@@ -43,13 +41,12 @@ use crate::task::Task;
 
 //#[derive(Debug)]
 pub struct App {
-    app_state: AppState,
-    selected_tab: SelectedTab,
     pub name_input: String,
     pub description_input: String,
     pub todo_list: TodoList,
     pub file_path: PathBuf,
     pub sections_order: Vec<String>,
+    pub should_exit: bool,
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
 }
@@ -73,31 +70,12 @@ pub enum CurrentlyEditing {
     Description,
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
-enum AppState {
-    #[default]
-    Running,
-    Quitting,
-}
-
-#[derive(Default, Clone, Copy, Display, FromRepr, EnumIter)]
-enum SelectedTab {
-    #[default]
-    #[strum(to_string = "Todo")]
-    Todo,
-    #[strum(to_string = "Doing")]
-    Doing,
-    #[strum(to_string = "Done")]
-    Done,
-}
-
 impl Default for App {
     fn default() -> Self {
         Self {
-            app_state: AppState::Running,
-            selected_tab: SelectedTab::Todo,
             name_input: String::new(),
             description_input: String::new(),
+            should_exit: false,
             file_path: Path::new("default.md").to_path_buf(),
             sections_order: vec![
                 "## Todo".to_string(),
@@ -171,8 +149,6 @@ impl App {
         let state = ListState::default();
 
         Self {
-            app_state: AppState::Running,
-            selected_tab: SelectedTab::Todo,
             name_input: String::new(),
             description_input: String::new(),
             todo_list: TodoList {
@@ -185,13 +161,14 @@ impl App {
                 "## Doing".to_string(),
                 "## Done".to_string(),
             ],
+            should_exit: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,
         }
     }
     // runs the application's main loop until the user quits
     pub fn run(&mut self, mut terminal: Terminal<impl Backend>) -> Result<()> {
-        while self.app_state == AppState::Running {
+        while !self.should_exit {
             terminal.draw(|f| f.render_widget(&mut *self, f.size()))?;
             if let Event::Key(key) = event::read()? {
                 let _ = self.handle_key_event(key);
@@ -205,17 +182,13 @@ impl App {
             CurrentScreen::Main => match key_event.code {
                 KeyCode::Char('j') => self.select_next(),
                 KeyCode::Char('k') => self.select_previous(),
-                KeyCode::Char('l') => self.next_tab(),
-                KeyCode::Char('h') => self.previous_tab(),
-                KeyCode::Down => self.select_next(),
-                KeyCode::Up => self.select_previous(),
-                KeyCode::Right => self.next_tab(),
-                KeyCode::Left => self.previous_tab(),
                 KeyCode::Char('c') => self.start_editing(),
                 KeyCode::Char('a') => self.start_adding(),
                 KeyCode::Char('d') => self.start_deleting(),
+                KeyCode::Down => self.select_next(),
+                KeyCode::Up => self.select_previous(),
                 KeyCode::Enter => self.toggle_status(),
-                KeyCode::Char('q') => self.quit(),
+                KeyCode::Char('q') => self.exit(),
                 _ => {}
             },
             CurrentScreen::Editing => match key_event.code {
@@ -243,11 +216,11 @@ impl App {
         Ok(())
     }
 
-    fn select_first(&mut self) {
-        self.todo_list.state.select(Some(0));
+    pub fn select_none(&mut self) {
+        self.todo_list.state.select(None);
     }
 
-    fn select_next(&mut self) {
+    pub fn select_next(&mut self) {
         self.todo_list.state.select_next();
     }
 
@@ -255,28 +228,26 @@ impl App {
         self.todo_list.state.select_previous();
     }
 
-    fn next_tab(&mut self) {
-        self.selected_tab = self.selected_tab.next();
-        self.select_first();
+    pub fn select_first(&mut self) {
+        self.todo_list.state.select_first();
     }
 
-    fn previous_tab(&mut self) {
-        self.selected_tab = self.selected_tab.previous();
-        self.select_first();
+    pub fn select_last(&mut self) {
+        self.todo_list.state.select_last();
     }
 
-    fn toggle_status(&mut self) {
+    pub fn toggle_status(&mut self) {
         if let Some(i) = self.todo_list.state.selected() {
             self.todo_list.items[i].update_status();
         }
     }
 
-    fn quit(&mut self) {
+    pub fn exit(&mut self) {
         self.save_todo_list();
-        self.app_state = AppState::Quitting;
+        self.should_exit = true;
     }
 
-    fn save_todo_list(&self) {
+    pub fn save_todo_list(&self) {
         // Generate the data from the list of tasks
         let mut data = String::new();
         let mut sections = HashMap::<String, Vec<Task>>::new();
@@ -311,20 +282,9 @@ impl App {
     }
 
     fn start_editing(&mut self) {
-        let filtered_items: Vec<&Task> = self
-            .todo_list
-            .items
-            .iter()
-            .filter(|task| match self.selected_tab {
-                SelectedTab::Todo => task.status == Status::Todo,
-                SelectedTab::Doing => task.status == Status::Doing,
-                SelectedTab::Done => task.status == Status::Done,
-            })
-            .collect();
-
         if let Some(i) = self.todo_list.state.selected() {
-            self.name_input = filtered_items[i].name.clone();
-            self.description_input = filtered_items[i].description.clone();
+            self.name_input = self.todo_list.items[i].name.clone();
+            self.description_input = self.todo_list.items[i].description.clone();
             self.current_screen = CurrentScreen::Editing;
             self.currently_editing = Some(CurrentlyEditing::Name);
         }
@@ -381,16 +341,10 @@ impl App {
     }
 
     fn add_new_task(&mut self) {
-        let status = match self.selected_tab {
-            SelectedTab::Todo => Status::Todo,
-            SelectedTab::Doing => Status::Doing,
-            SelectedTab::Done => Status::Done,
-        };
-
         self.todo_list.items.push(Task::new(
             self.name_input.clone(),
             self.description_input.clone(),
-            status,
+            Status::Todo,
             None,
         ));
         self.current_screen = CurrentScreen::Main;
@@ -420,101 +374,26 @@ impl App {
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        use Constraint::{Fill, Length, Min};
-        let [header_area, main_area, footer_area] =
-            Layout::vertical([Length(2), Fill(1), Length(1)]).areas(area);
+        let [header_area, main_area, footer_area] = Layout::vertical([
+            Constraint::Length(2),
+            Constraint::Fill(1),
+            Constraint::Length(1),
+        ])
+        .areas(area);
 
-        let tabs_area = Layout::default()
-            .constraints([Min(1), Min(1)].as_ref())
-            .split(header_area)[0];
-
-        let [list_area, item_area] = Layout::vertical([Fill(1), Fill(1)]).areas(main_area);
-        self.render_header(header_area, buf);
+        let [list_area, item_area] =
+            Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
+        App::render_header(header_area, buf);
         App::render_footer(footer_area, buf);
-        self.render_tabs(tabs_area, buf);
         self.render_list(list_area, buf);
         self.render_selected_item(item_area, buf);
     }
 }
 
-impl Widget for SelectedTab {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        match self {
-            SelectedTab::Todo => self.render_todo(area, buf),
-            SelectedTab::Doing => self.render_doing(area, buf),
-            SelectedTab::Done => self.render_done(area, buf),
-        }
-    }
-}
-
-impl SelectedTab {
-    fn previous(self) -> Self {
-        let current_index: usize = self as usize;
-        let previous_index = current_index.saturating_sub(1);
-        Self::from_repr(previous_index).unwrap_or(self)
-    }
-    fn next(self) -> Self {
-        let current_index = self as usize;
-        let next_index = current_index.saturating_add(1);
-        Self::from_repr(next_index).unwrap_or(self)
-    }
-    /// Return tab's name as a styled `Line`
-    fn title(self) -> Line<'static> {
-        format!("  {self}  ")
-            .fg(tailwind::SLATE.c200)
-            .bg(self.palette().c900)
-            .into()
-    }
-
-    fn render_todo(self, area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Hello, World!")
-            .block(self.block())
-            .render(area, buf);
-    }
-
-    fn render_doing(self, area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Welcome to the Ratatui tabs example!")
-            .block(self.block())
-            .render(area, buf);
-    }
-
-    fn render_done(self, area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Look! I'm different than others!")
-            .block(self.block())
-            .render(area, buf);
-    }
-
-    /// A block surrounding the tab's content
-    fn block(self) -> Block<'static> {
-        Block::bordered()
-            .border_set(symbols::border::PROPORTIONAL_TALL)
-            .padding(Padding::horizontal(1))
-            .border_style(self.palette().c700)
-    }
-
-    const fn palette(self) -> tailwind::Palette {
-        match self {
-            Self::Todo => tailwind::BLUE,
-            Self::Doing => tailwind::EMERALD,
-            Self::Done => tailwind::INDIGO,
-        }
-    }
-}
-
-impl From<SelectedTab> for String {
-    fn from(tab: SelectedTab) -> Self {
-        tab.to_string()
-    }
-}
-
 // Rendering logic for the app
 impl App {
-    fn render_header(&mut self, area: Rect, buf: &mut Buffer) {
-        let tab_name = self.selected_tab.to_string();
-        Paragraph::new(format!("Horme - {}", tab_name))
-            .bold()
-            .centered()
-            .render(area, buf);
+    fn render_header(area: Rect, buf: &mut Buffer) {
+        Paragraph::new("Horme").bold().centered().render(area, buf);
     }
 
     fn render_footer(area: Rect, buf: &mut Buffer) {
@@ -523,19 +402,6 @@ impl App {
         )
         .centered()
         .render(area, buf);
-    }
-
-    fn render_tabs(&mut self, area: Rect, buf: &mut Buffer) {
-        let titles = SelectedTab::iter().map(SelectedTab::title);
-        let highlight_style = (Color::default(), self.selected_tab.palette().c700);
-        let selected_tab_index = self.selected_tab as usize;
-
-        Tabs::new(titles)
-            .highlight_style(highlight_style)
-            .select(selected_tab_index)
-            .padding("", "")
-            .divider(" ")
-            .render(area, buf);
     }
 
     // Iterate through the list of tasks and render them
@@ -547,41 +413,66 @@ impl App {
             .border_style(TODO_HEADER_STYLE)
             .bg(NORMAL_ROW_BG);
 
-        //let items: Vec<ListItem> = self
-        //    .todo_list
-        //    .items
-        //    .iter()
-        //    .enumerate()
-        //    .map(|(i, task)| {
-        //        let color = alternate_colors(i);
-        //        ListItem::from(task.name.clone()).bg(color)
-        //    })
-        //    .collect();
-
-        let filtered_items: Vec<&Task> = self
+        let items: Vec<ListItem> = self
             .todo_list
             .items
             .iter()
-            .filter(|task| match self.selected_tab {
-                SelectedTab::Todo => task.status == Status::Todo,
-                SelectedTab::Doing => task.status == Status::Doing,
-                SelectedTab::Done => task.status == Status::Done,
+            .enumerate()
+            .filter_map(|(i, todo_item)| {
+                if i < self.todo_list.items.len() {
+                    let bg_color = alternate_colors(i);
+                    let fg_color = match todo_item.status {
+                        Status::Todo => TODO_FG_COLOR,
+                        Status::Doing => DOING_FG_COLOR,
+                        Status::Done => DONE_FG_COLOR,
+                    };
+                    Some(
+                        ListItem::from(todo_item.name.clone())
+                            .bg(bg_color)
+                            .fg(fg_color),
+                    )
+                } else {
+                    None
+                }
             })
             .collect();
 
-        let items: Vec<ListItem> = filtered_items
-            .iter()
-            .enumerate()
-            .map(|(i, task)| {
-                let color = alternate_colors(i);
-                ListItem::from(task.name.clone()).bg(color)
-            })
-            .collect();
+        //let highlighted_style = match self.todo_list.state.selected() {
+        //    Some(i) => Style::default()
+        //        .fg(alternate_colors(i))
+        //        .bg(match self.todo_list.items[i].status {
+        //            Status::Todo => TODO_FG_COLOR,
+        //            Status::Doing => DOING_FG_COLOR,
+        //            Status::Done => DONE_FG_COLOR,
+        //        })
+        //        .add_modifier(Modifier::BOLD),
+        //    None => Style::default(),
+        //};
+
+        let highlighted_style = if let Some(i) = self.todo_list.state.selected() {
+            if i < self.todo_list.items.len() {
+                match self.todo_list.items[i].status {
+                    Status::Todo => Style::default()
+                        .fg(TODO_FG_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                    Status::Doing => Style::default()
+                        .fg(DOING_FG_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                    Status::Done => Style::default()
+                        .fg(DONE_FG_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                }
+            } else {
+                Style::default()
+            }
+        } else {
+            Style::default()
+        };
 
         // Create a list from all list items and highlight the currently selected one
         let list = List::new(items)
             .block(block)
-            .highlight_style(SELECTED_STYLE)
+            .highlight_style(highlighted_style)
             .highlight_symbol(">> ")
             .highlight_spacing(HighlightSpacing::Always);
 
@@ -599,17 +490,6 @@ impl App {
             .border_style(TODO_HEADER_STYLE)
             .bg(NORMAL_ROW_BG)
             .padding(Padding::horizontal(1));
-
-        let filtered_items: Vec<&Task> = self
-            .todo_list
-            .items
-            .iter()
-            .filter(|task| match self.selected_tab {
-                SelectedTab::Todo => task.status == Status::Todo,
-                SelectedTab::Doing => task.status == Status::Doing,
-                SelectedTab::Done => task.status == Status::Done,
-            })
-            .collect();
 
         // Check if the user is editing an item
         match self.current_screen {
@@ -658,23 +538,19 @@ impl App {
             }
             _ => {
                 let info = if let Some(i) = self.todo_list.state.selected() {
-                    if i < self.todo_list.items.len() {
-                        match filtered_items[i].status {
-                            Status::Todo => format!(
-                                "◇ TODO: {}\n{}",
-                                filtered_items[i].name, filtered_items[i].description
-                            ),
-                            Status::Doing => format!(
-                                "◎ IN PROGRESS: {}\n{}",
-                                filtered_items[i].name, filtered_items[i].description
-                            ),
-                            Status::Done => format!(
-                                "✓ DONE: {}\n{}",
-                                filtered_items[i].name, filtered_items[i].description
-                            ),
-                        }
-                    } else {
-                        "No task selected".to_string()
+                    match self.todo_list.items[i].status {
+                        Status::Todo => format!(
+                            "◇ TODO: {}\n{}",
+                            self.todo_list.items[i].name, self.todo_list.items[i].description
+                        ),
+                        Status::Doing => format!(
+                            "◎ IN PROGRESS: {}\n{}",
+                            self.todo_list.items[i].name, self.todo_list.items[i].description
+                        ),
+                        Status::Done => format!(
+                            "✓ DONE: {}\n{}",
+                            self.todo_list.items[i].name, self.todo_list.items[i].description
+                        ),
                     }
                 } else {
                     "No task selected".to_string()
