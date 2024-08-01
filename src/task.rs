@@ -109,4 +109,8 @@ impl Subtask {
             status: false,
         }
     }
+
+    pub fn update_status(&mut self) {
+        self.status = !self.status;
+    }
 }

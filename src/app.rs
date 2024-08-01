@@ -68,8 +68,9 @@ pub enum CurrentScreen {
     Main,
     Editing,
     Subtask,
-    Adding,
+    AddTask,
     Deleting,
+    AddSubtask,
 }
 
 pub enum CurrentlyEditing {
@@ -220,7 +221,7 @@ impl App {
                 KeyCode::Backspace => self.handle_backspace(),
                 _ => {}
             },
-            CurrentScreen::Adding => match key_event.code {
+            CurrentScreen::AddTask => match key_event.code {
                 KeyCode::Enter => self.add_new_task(),
                 KeyCode::Esc => self.cancel_adding(),
                 KeyCode::Tab => self.toggle_editing_field(),
@@ -236,7 +237,17 @@ impl App {
             CurrentScreen::Subtask => match key_event.code {
                 KeyCode::Char('n') => self.select_next_subtask(),
                 KeyCode::Char('p') => self.select_previous_subtask(),
+                KeyCode::Delete => self.delete_subtask(),
+                KeyCode::Char('u') => self.update_subtask(),
+                KeyCode::Char('A') => self.start_adding_subtask(),
                 KeyCode::Esc => self.cancel_subtask(),
+                _ => {}
+            },
+            CurrentScreen::AddSubtask => match key_event.code {
+                KeyCode::Enter => self.add_subtask(),
+                KeyCode::Esc => self.cancel_adding_subtask(),
+                KeyCode::Char(c) => self.handle_editing_input(c),
+                KeyCode::Backspace => self.handle_backspace(),
                 _ => {}
             },
         }
@@ -245,33 +256,43 @@ impl App {
 
     fn select_next(&mut self) {
         self.todo_list.state.select_next();
-        // Clear the subtask_list and populate the subtask_list with the subtasks of the selected item,
-        // if there are any. Otherwise, just clear the subtask_list
-        if let Some(i) = self.todo_list.state.selected() {
-            let subtasks = self.todo_list.items[i].subtasks.clone();
-            self.subtask_list = SubtaskList {
-                state: ListState::default(),
-                items: subtasks,
-            }
-        }
+        self.create_subtask_list();
     }
 
     fn select_previous(&mut self) {
         self.todo_list.state.select_previous();
-        let subtasks = self.todo_list.items[self.todo_list.state.selected().unwrap()]
-            .subtasks
-            .clone();
+        self.create_subtask_list();
+    }
+
+    fn create_subtask_list(&mut self) {
+        // Clear the subtask_list and populate the subtask_list with the subtasks of the selected item,
+        // if there are any. Otherwise, just clear the subtask_list
         self.subtask_list = SubtaskList {
             state: ListState::default(),
-            items: subtasks,
+            items: Vec::new(),
+        };
+
+        let i = match self.todo_list.state.selected() {
+            Some(i) => i,
+            None => return,
+        };
+
+        if i < self.todo_list.items.len() {
+            let subtasks = self.todo_list.items[i].subtasks.clone();
+            self.subtask_list = SubtaskList {
+                state: ListState::default(),
+                items: subtasks,
+            };
         }
     }
 
     fn select_next_subtask(&mut self) {
-        self.todo_list.state.select_next();
+        self.subtask_list.state.select_next();
     }
 
-    fn select_previous_subtask(&mut self) {}
+    fn select_previous_subtask(&mut self) {
+        self.subtask_list.state.select_previous();
+    }
 
     fn toggle_status(&mut self) {
         if let Some(i) = self.todo_list.state.selected() {
@@ -382,7 +403,7 @@ impl App {
     fn start_adding(&mut self) {
         self.name_input = String::new();
         self.description_input = String::new();
-        self.current_screen = CurrentScreen::Adding;
+        self.current_screen = CurrentScreen::AddTask;
         self.currently_editing = Some(CurrentlyEditing::Name);
     }
 
@@ -417,12 +438,63 @@ impl App {
         self.current_screen = CurrentScreen::Main;
     }
 
+    fn start_subtask(&mut self) {
+        self.current_screen = CurrentScreen::Subtask;
+    }
+
     fn cancel_subtask(&mut self) {
         self.current_screen = CurrentScreen::Main;
     }
 
-    fn start_subtask(&mut self) {
+    fn delete_subtask(&mut self) {
+        if let Some(i) = self.subtask_list.state.selected() {
+            self.todo_list.items[self.todo_list.state.selected().unwrap()]
+                .subtasks
+                .remove(i);
+
+            self.subtask_list.items.remove(i);
+        }
+    }
+
+    fn update_subtask(&mut self) {
+        if let Some(i) = self.subtask_list.state.selected() {
+            self.todo_list.items[self.todo_list.state.selected().unwrap()]
+                .subtasks
+                .get_mut(i)
+                .unwrap()
+                .update_status();
+
+            self.subtask_list.items[i].update_status();
+        }
+    }
+
+    fn start_adding_subtask(&mut self) {
+        self.name_input = String::new();
+        self.description_input = String::new();
+        self.current_screen = CurrentScreen::AddSubtask;
+        self.currently_editing = Some(CurrentlyEditing::Name);
+    }
+
+    fn cancel_adding_subtask(&mut self) {
         self.current_screen = CurrentScreen::Subtask;
+        self.currently_editing = None;
+    }
+
+    fn add_subtask(&mut self) {
+        if let Some(i) = self.todo_list.state.selected() {
+            self.todo_list
+                .items
+                .get_mut(i)
+                .unwrap()
+                .subtasks
+                .push(Subtask::new(self.name_input.clone()));
+        }
+
+        self.subtask_list
+            .items
+            .push(Subtask::new(self.name_input.clone()));
+        self.current_screen = CurrentScreen::Subtask;
+        self.currently_editing = None;
     }
 }
 
@@ -565,7 +637,7 @@ impl App {
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
-            CurrentScreen::Adding => {
+            CurrentScreen::AddTask => {
                 let input = match self.currently_editing {
                     Some(CurrentlyEditing::Name) => format!("Name: {} ", self.name_input),
                     Some(CurrentlyEditing::Description) => {
@@ -596,8 +668,15 @@ impl App {
             CurrentScreen::Subtask => {
                 let info = format!(
                     "Modify subtask: {}",
-                    self.subtask_list.items[self.subtask_list.state.selected().unwrap_or_default()]
-                        .name
+                    if let Some(i) = self.subtask_list.state.selected() {
+                        if i < self.subtask_list.items.len() {
+                            self.subtask_list.items[i].name.clone()
+                        } else {
+                            self.subtask_list.items[i - 1].name.clone()
+                        }
+                    } else {
+                        "No subtask selected".to_string()
+                    }
                 );
                 // Render the item info
                 Paragraph::new(info)
@@ -645,34 +724,44 @@ impl App {
 
         match self.current_screen {
             CurrentScreen::Subtask => {
-                // Populate a Vec<ListItem> with the subtasks
-                //let mut subtasks: Vec<ListItem> = Vec::new();
-                //if let Some(i) = self.todo_list.state.selected() {
-                //    for subtask in &self.todo_list.items[i].subtasks {
-                //        subtasks.push(ListItem::from(subtask));
-                //    }
-                //}
-
-                let subtasks = self
+                let subtasks: Vec<ListItem> = self
                     .subtask_list
                     .items
                     .iter()
-                    .map(|subtask| ListItem::new(subtask.name.clone()))
-                    .collect::<Vec<_>>();
+                    .map(|subtask| ListItem::from(subtask))
+                    .collect();
 
-                let list = List::new(subtasks).block(block).highlight_symbol(">");
+                let list = List::new(subtasks)
+                    .block(block)
+                    .highlight_symbol(">")
+                    .highlight_spacing(HighlightSpacing::Always);
                 // Disambiguate this trait method as both `Widget` and `StatefulWidget`
                 // share the `render` method
                 StatefulWidget::render(list, area, buf, &mut self.subtask_list.state);
+            }
+            CurrentScreen::AddSubtask => {
+                let input = format!("Name: {}", self.name_input);
+                // Render the item info
+                Paragraph::new(input)
+                    .block(block)
+                    .fg(TEXT_FG_ADDING)
+                    .wrap(Wrap { trim: false })
+                    .render(area, buf);
             }
             _ => {
                 let subtasks: String = self
                     .subtask_list
                     .items
                     .iter()
-                    .map(|subtask| subtask.name.clone())
+                    .map(|subtask| {
+                        if subtask.status {
+                            format!("[x] {}", subtask.name)
+                        } else {
+                            format!("[ ] {}", subtask.name)
+                        }
+                    })
                     .collect::<Vec<_>>()
-                    .join(", ");
+                    .join("\n");
 
                 let info = format!("{}", subtasks);
                 // Render the item info
