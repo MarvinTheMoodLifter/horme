@@ -27,24 +27,23 @@ const TODO_HEADER_STYLE: Style = Style::new()
     .add_modifier(Modifier::BOLD);
 const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
-const SELECTED_STYLE: Style = Style::new()
-    .fg(SLATE.c900)
-    .bg(AMBER.c200)
-    .add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
+const TODO_FG_COLOR: Color = AMBER.c500;
+const DOING_FG_COLOR: Color = GREEN.c500;
+const DONE_FG_COLOR: Color = SLATE.c500;
 const TEXT_FG_EDITING: Color = AMBER.c400;
 const TEXT_FG_ADDING: Color = GREEN.c400;
 const TEXT_FG_DELETING: Color = RED.c400;
 const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
-use crate::task::Status;
-use crate::task::Task;
+use crate::task::{Status, Subtask, Task};
 
 //#[derive(Debug)]
 pub struct App {
     pub name_input: String,
     pub description_input: String,
     pub todo_list: TodoList,
+    pub subtask_list: SubtaskList,
     pub file_path: PathBuf,
     pub sections_order: Vec<String>,
     pub should_exit: bool,
@@ -58,10 +57,17 @@ pub struct TodoList {
     pub items: Vec<Task>,
 }
 
+#[derive(Debug, Default)]
+pub struct SubtaskList {
+    pub state: ListState,
+    pub items: Vec<Subtask>,
+}
+
 #[derive(PartialEq)]
 pub enum CurrentScreen {
     Main,
     Editing,
+    Subtask,
     Adding,
     Deleting,
 }
@@ -125,6 +131,7 @@ impl Default for App {
                     Status::Done,
                 ),
             ]),
+            subtask_list: SubtaskList::default(),
             current_screen: CurrentScreen::Main,
             currently_editing: None,
         }
@@ -145,6 +152,17 @@ impl FromIterator<(&'static str, &'static str, Status)> for TodoList {
     }
 }
 
+impl FromIterator<&'static str> for SubtaskList {
+    fn from_iter<I: IntoIterator<Item = &'static str>>(iter: I) -> Self {
+        let item = iter
+            .into_iter()
+            .map(|name| Subtask::new(name.to_string()))
+            .collect();
+        let state = ListState::default();
+        Self { state, items: item }
+    }
+}
+
 impl App {
     pub fn new(todo_list: Vec<Task>, file_path: &Path) -> Self {
         let state = ListState::default();
@@ -156,6 +174,7 @@ impl App {
                 state,
                 items: todo_list,
             },
+            subtask_list: SubtaskList::default(),
             file_path: file_path.to_path_buf(),
             sections_order: vec![
                 "## Todo".to_string(),
@@ -184,6 +203,7 @@ impl App {
                 KeyCode::Char('j') => self.select_next(),
                 KeyCode::Char('k') => self.select_previous(),
                 KeyCode::Char('c') => self.start_editing(),
+                KeyCode::Char('s') => self.start_subtask(),
                 KeyCode::Char('a') => self.start_adding(),
                 KeyCode::Char('d') => self.start_deleting(),
                 KeyCode::Down => self.select_next(),
@@ -213,42 +233,58 @@ impl App {
                 KeyCode::Esc => self.cancel_deleting(),
                 _ => {}
             },
+            CurrentScreen::Subtask => match key_event.code {
+                KeyCode::Char('n') => self.select_next_subtask(),
+                KeyCode::Char('p') => self.select_previous_subtask(),
+                KeyCode::Esc => self.cancel_subtask(),
+                _ => {}
+            },
         }
         Ok(())
     }
 
-    pub fn select_none(&mut self) {
-        self.todo_list.state.select(None);
-    }
-
-    pub fn select_next(&mut self) {
+    fn select_next(&mut self) {
         self.todo_list.state.select_next();
+        // Clear the subtask_list and populate the subtask_list with the subtasks of the selected item,
+        // if there are any. Otherwise, just clear the subtask_list
+        if let Some(i) = self.todo_list.state.selected() {
+            let subtasks = self.todo_list.items[i].subtasks.clone();
+            self.subtask_list = SubtaskList {
+                state: ListState::default(),
+                items: subtasks,
+            }
+        }
     }
 
     fn select_previous(&mut self) {
         self.todo_list.state.select_previous();
+        let subtasks = self.todo_list.items[self.todo_list.state.selected().unwrap()]
+            .subtasks
+            .clone();
+        self.subtask_list = SubtaskList {
+            state: ListState::default(),
+            items: subtasks,
+        }
     }
 
-    pub fn select_first(&mut self) {
-        self.todo_list.state.select_first();
+    fn select_next_subtask(&mut self) {
+        self.todo_list.state.select_next();
     }
 
-    pub fn select_last(&mut self) {
-        self.todo_list.state.select_last();
-    }
+    fn select_previous_subtask(&mut self) {}
 
-    pub fn toggle_status(&mut self) {
+    fn toggle_status(&mut self) {
         if let Some(i) = self.todo_list.state.selected() {
             self.todo_list.items[i].update_status();
         }
     }
 
-    pub fn exit(&mut self) {
+    fn exit(&mut self) {
         self.save_todo_list();
         self.should_exit = true;
     }
 
-    pub fn save_todo_list(&self) {
+    fn save_todo_list(&self) {
         // Generate the data from the list of tasks
         let mut data = String::new();
         let mut sections = HashMap::<String, Vec<Task>>::new();
@@ -274,6 +310,15 @@ impl App {
                 data.push_str(&format!("- {}\n", task.name));
                 if !task.description.is_empty() {
                     data.push_str(&format!("    > {}\n", task.description));
+                }
+                if !task.subtasks.is_empty() {
+                    for subtask in &task.subtasks {
+                        if subtask.status {
+                            data.push_str(&format!("    * [x] {}\n", subtask.name));
+                        } else {
+                            data.push_str(&format!("    * [ ] {}\n", subtask.name));
+                        }
+                    }
                 }
             }
             data.push_str("\n");
@@ -371,6 +416,14 @@ impl App {
     fn cancel_deleting(&mut self) {
         self.current_screen = CurrentScreen::Main;
     }
+
+    fn cancel_subtask(&mut self) {
+        self.current_screen = CurrentScreen::Main;
+    }
+
+    fn start_subtask(&mut self) {
+        self.current_screen = CurrentScreen::Subtask;
+    }
 }
 
 impl Widget for &mut App {
@@ -382,12 +435,17 @@ impl Widget for &mut App {
         ])
         .areas(area);
 
-        let [list_area, item_area] =
+        let [list_area, info_area] =
             Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
+
+        let [item_area, subtask_area] =
+            Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(info_area);
+
         App::render_header(header_area, buf);
         App::render_footer(footer_area, buf);
         self.render_list(list_area, buf);
         self.render_selected_item(item_area, buf);
+        self.render_subtasks(subtask_area, buf);
     }
 }
 
@@ -419,22 +477,65 @@ impl App {
             .items
             .iter()
             .enumerate()
-            .map(|(i, todo_item)| {
-                let color = alternate_colors(i);
-                ListItem::from(todo_item.name.clone()).bg(color)
+            .filter_map(|(i, todo_item)| {
+                if i < self.todo_list.items.len() {
+                    let bg_color = alternate_colors(i);
+                    let fg_color = match todo_item.status {
+                        Status::Todo => TODO_FG_COLOR,
+                        Status::Doing => DOING_FG_COLOR,
+                        Status::Done => DONE_FG_COLOR,
+                    };
+                    Some(
+                        ListItem::from(todo_item.name.clone())
+                            .bg(bg_color)
+                            .fg(fg_color),
+                    )
+                } else {
+                    None
+                }
             })
             .collect();
 
-        // Create a list from all list items and highlight the currently selected one
-        let list = List::new(items)
-            .block(block)
-            .highlight_style(SELECTED_STYLE)
-            .highlight_symbol(">> ")
-            .highlight_spacing(HighlightSpacing::Always);
+        match self.current_screen {
+            CurrentScreen::Main => {
+                let highlighted_style = if let Some(i) = self.todo_list.state.selected() {
+                    if i < self.todo_list.items.len() {
+                        match self.todo_list.items[i].status {
+                            Status::Todo => Style::default()
+                                .fg(TODO_FG_COLOR)
+                                .add_modifier(Modifier::BOLD),
+                            Status::Doing => Style::default()
+                                .fg(DOING_FG_COLOR)
+                                .add_modifier(Modifier::BOLD),
+                            Status::Done => Style::default()
+                                .fg(DONE_FG_COLOR)
+                                .add_modifier(Modifier::BOLD),
+                        }
+                    } else {
+                        Style::default()
+                    }
+                } else {
+                    Style::default()
+                };
 
-        // Disambiguate this trait method as both `Widget` and `StatefulWidget`
-        // share the `render` method
-        StatefulWidget::render(list, area, buf, &mut self.todo_list.state);
+                // Create a list from all list items and highlight the currently selected one
+                let list = List::new(items)
+                    .block(block)
+                    .highlight_style(highlighted_style)
+                    .highlight_symbol(">> ")
+                    .highlight_spacing(HighlightSpacing::Always);
+
+                // Disambiguate this trait method as both `Widget` and `StatefulWidget`
+                // share the `render` method
+                StatefulWidget::render(list, area, buf, &mut self.todo_list.state);
+            }
+            _ => {
+                // If on other screens, just render the list of tasks,
+                // without the possibility to select one
+                let list = List::new(items).block(block);
+                Widget::render(list, area, buf);
+            }
+        }
     }
 
     fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
@@ -481,9 +582,9 @@ impl App {
             }
             CurrentScreen::Deleting => {
                 let input = format!(
-                    "Are you sure you want to delete <{}>?\n
+                    "Are you sure you want to delete \"{}\"?\n
                         Press d to confirm, Esc to cancel",
-                    self.name_input
+                    self.todo_list.items[self.todo_list.state.selected().unwrap()].name
                 );
                 // Render the item info
                 Paragraph::new(input)
@@ -492,8 +593,21 @@ impl App {
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
+            CurrentScreen::Subtask => {
+                let info = format!(
+                    "Modify subtask: {}",
+                    self.subtask_list.items[self.subtask_list.state.selected().unwrap_or_default()]
+                        .name
+                );
+                // Render the item info
+                Paragraph::new(info)
+                    .block(block)
+                    .fg(TEXT_FG_COLOR)
+                    .wrap(Wrap { trim: false })
+                    .render(area, buf);
+            }
             _ => {
-                let info = if let Some(i) = self.todo_list.state.selected() {
+                let status_info = if let Some(i) = self.todo_list.state.selected() {
                     match self.todo_list.items[i].status {
                         Status::Todo => format!(
                             "◇ TODO: {}\n{}",
@@ -511,6 +625,56 @@ impl App {
                 } else {
                     "No task selected".to_string()
                 };
+                let info = format!("{}", status_info);
+                // Render the item info
+                Paragraph::new(info)
+                    .block(block)
+                    .fg(TEXT_FG_COLOR)
+                    .wrap(Wrap { trim: false })
+                    .render(area, buf);
+            }
+        }
+    }
+
+    fn render_subtasks(&mut self, area: Rect, buf: &mut Buffer) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(TODO_HEADER_STYLE)
+            .title(Line::raw("Subtasks").centered())
+            .bg(NORMAL_ROW_BG);
+
+        match self.current_screen {
+            CurrentScreen::Subtask => {
+                // Populate a Vec<ListItem> with the subtasks
+                //let mut subtasks: Vec<ListItem> = Vec::new();
+                //if let Some(i) = self.todo_list.state.selected() {
+                //    for subtask in &self.todo_list.items[i].subtasks {
+                //        subtasks.push(ListItem::from(subtask));
+                //    }
+                //}
+
+                let subtasks = self
+                    .subtask_list
+                    .items
+                    .iter()
+                    .map(|subtask| ListItem::new(subtask.name.clone()))
+                    .collect::<Vec<_>>();
+
+                let list = List::new(subtasks).block(block).highlight_symbol(">");
+                // Disambiguate this trait method as both `Widget` and `StatefulWidget`
+                // share the `render` method
+                StatefulWidget::render(list, area, buf, &mut self.subtask_list.state);
+            }
+            _ => {
+                let subtasks: String = self
+                    .subtask_list
+                    .items
+                    .iter()
+                    .map(|subtask| subtask.name.clone())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let info = format!("{}", subtasks);
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
@@ -536,6 +700,16 @@ impl From<&Task> for ListItem<'_> {
             Status::Todo => Line::styled(format!("◇ {}", value.name), TEXT_FG_COLOR),
             Status::Doing => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
             Status::Done => Line::styled(format!("✓ {}", value.name), COMPLETED_TEXT_FG_COLOR),
+        };
+        ListItem::new(line)
+    }
+}
+
+impl From<&Subtask> for ListItem<'_> {
+    fn from(value: &Subtask) -> Self {
+        let line = match value.status {
+            true => Line::styled(format!("[x] {}", value.name), TEXT_FG_COLOR),
+            false => Line::styled(format!("[ ] {}", value.name), TEXT_FG_COLOR),
         };
         ListItem::new(line)
     }

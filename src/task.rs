@@ -4,16 +4,23 @@ use std::sync::atomic::{AtomicU16, Ordering};
 static UNIQUE_ID: AtomicU16 = AtomicU16::new(0);
 
 // Task struct
-#[derive(Debug, PartialEq, Clone, serde::Serialize)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Task {
     pub name: String,
     pub description: String,
     pub status: Status,
     pub id: u16,
     pub due_date: String,
+    pub subtasks: Vec<Subtask>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct Subtask {
+    pub name: String,
+    pub status: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Status {
     Todo,
     Doing,
@@ -45,6 +52,7 @@ impl Task {
             status,
             id: new_id,
             due_date: "".to_string(),
+            subtasks: vec![],
         }
     }
 
@@ -61,6 +69,22 @@ impl Task {
         self.description.push_str(description);
     }
 
+    pub fn add_subtask(&mut self, name: String, status: bool) {
+        self.subtasks.push(Subtask { name, status });
+    }
+
+    pub fn remove_subtask(&mut self, index: usize) {
+        self.subtasks.remove(index);
+    }
+
+    pub fn toggle_subtask_status(&mut self, index: usize) {
+        self.subtasks[index].status = !self.subtasks[index].status;
+    }
+
+    pub fn get_subtasks(&self) -> Vec<&Subtask> {
+        self.subtasks.iter().collect()
+    }
+
     pub fn get_id(&self) -> u16 {
         self.id
     }
@@ -75,5 +99,14 @@ impl Task {
 
     pub fn get_status(&self) -> Status {
         self.status
+    }
+}
+
+impl Subtask {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            status: false,
+        }
     }
 }
