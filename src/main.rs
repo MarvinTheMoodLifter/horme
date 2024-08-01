@@ -68,6 +68,14 @@ fn build_todo_list(file_path: &Path) -> Result<Vec<Task>> {
             if let Some(last_element) = todo_list.last_mut() {
                 last_element.add_description(&line[5..].trim());
             }
+        } else if line.starts_with("    * [ ]") || line.starts_with("    * [x]") {
+            if let Some(last_element) = todo_list.last_mut() {
+                if line.starts_with("    * [ ]") {
+                    last_element.add_subtask(line[9..].trim().to_string(), false);
+                } else if line.starts_with("    * [x]") {
+                    last_element.add_subtask(line[9..].trim().to_string(), true);
+                }
+            }
         }
     }
 
