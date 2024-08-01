@@ -1,15 +1,17 @@
 ## Todo
-- nginx via docker
-- Macro Pad
+- Nginx via docker
 - Learn SQL
-- radicle
-- Setup VPN at home
 - Certbot via snap
+    * [x] Let's Encrypt
+    * [ ] Cloudflare
+    * [ ] GoDaddy
 
 ## Doing
 - Ratatui - Rust TUI
-- forgejo
 
 ## Done
-- xmpp
+- Radicle
+    > Peer to Peer Git
+    * [ ] Git alternative
+    * [x] Nice concept
 
