@@ -4,6 +4,7 @@ use std::fs;
 use std::path::Path;
 
 mod app;
+mod colors;
 mod task;
 mod tui;
 

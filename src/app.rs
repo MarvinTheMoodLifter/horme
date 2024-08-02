@@ -25,17 +25,17 @@ const TODO_HEADER_STYLE: Style = Style::new()
     .fg(SLATE.c800)
     .bg(AMBER.c400)
     .add_modifier(Modifier::BOLD);
-const NORMAL_ROW_BG: Color = SLATE.c950;
-const ALT_ROW_BG_COLOR: Color = SLATE.c900;
-const TEXT_FG_COLOR: Color = SLATE.c200;
-const TODO_FG_COLOR: Color = AMBER.c500;
-const DOING_FG_COLOR: Color = GREEN.c500;
-const DONE_FG_COLOR: Color = SLATE.c500;
-const TEXT_FG_EDITING: Color = AMBER.c400;
-const TEXT_FG_ADDING: Color = GREEN.c400;
-const TEXT_FG_DELETING: Color = RED.c400;
-const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
+const INFO_HEADER_STYLE: Style = Style::new()
+    .fg(SLATE.c800)
+    .bg(GREEN.c400)
+    .add_modifier(Modifier::BOLD);
+const SUBTASK_HEADER_STYLE: Style = Style::new()
+    .fg(SLATE.c800)
+    .bg(RED.c400)
+    .add_modifier(Modifier::BOLD);
+const TEXT_FG_COLOR: Color = SLATE.c800;
 
+use crate::colors::ColorPalette;
 use crate::task::{Status, Subtask, Task};
 
 //#[derive(Debug)]
@@ -46,6 +46,7 @@ pub struct App {
     pub subtask_list: SubtaskList,
     pub file_path: PathBuf,
     pub sections_order: Vec<String>,
+    pub palette: ColorPalette,
     pub should_exit: bool,
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
@@ -132,6 +133,7 @@ impl Default for App {
                     Status::Done,
                 ),
             ]),
+            palette: ColorPalette::default(),
             subtask_list: SubtaskList::default(),
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -182,6 +184,7 @@ impl App {
                 "## Doing".to_string(),
                 "## Done".to_string(),
             ],
+            palette: ColorPalette::default(),
             should_exit: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -507,16 +510,16 @@ impl Widget for &mut App {
         ])
         .areas(area);
 
-        let [list_area, info_area] =
+        let [item_area, info_area] =
             Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
 
-        let [item_area, subtask_area] =
-            Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(info_area);
+        let [list_area, subtask_area] =
+            Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(item_area);
 
         App::render_header(header_area, buf);
         App::render_footer(footer_area, buf);
         self.render_list(list_area, buf);
-        self.render_selected_item(item_area, buf);
+        self.render_selected_item(info_area, buf);
         self.render_subtasks(subtask_area, buf);
     }
 }
@@ -542,7 +545,7 @@ impl App {
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
             .border_style(TODO_HEADER_STYLE)
-            .bg(NORMAL_ROW_BG);
+            .bg(self.palette.background);
 
         let items: Vec<ListItem> = self
             .todo_list
@@ -551,11 +554,11 @@ impl App {
             .enumerate()
             .filter_map(|(i, todo_item)| {
                 if i < self.todo_list.items.len() {
-                    let bg_color = alternate_colors(i);
+                    let bg_color = self.alternate_colors(i);
                     let fg_color = match todo_item.status {
-                        Status::Todo => TODO_FG_COLOR,
-                        Status::Doing => DOING_FG_COLOR,
-                        Status::Done => DONE_FG_COLOR,
+                        Status::Todo => self.palette.light_yellow,
+                        Status::Doing => self.palette.light_magenta,
+                        Status::Done => self.palette.light_green,
                     };
                     Some(
                         ListItem::from(todo_item.name.clone())
@@ -574,13 +577,13 @@ impl App {
                     if i < self.todo_list.items.len() {
                         match self.todo_list.items[i].status {
                             Status::Todo => Style::default()
-                                .fg(TODO_FG_COLOR)
+                                .fg(self.palette.light_yellow)
                                 .add_modifier(Modifier::BOLD),
                             Status::Doing => Style::default()
-                                .fg(DOING_FG_COLOR)
+                                .fg(self.palette.light_magenta)
                                 .add_modifier(Modifier::BOLD),
                             Status::Done => Style::default()
-                                .fg(DONE_FG_COLOR)
+                                .fg(self.palette.light_green)
                                 .add_modifier(Modifier::BOLD),
                         }
                     } else {
@@ -616,8 +619,8 @@ impl App {
             .title(Line::raw("Info").centered())
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
-            .border_style(TODO_HEADER_STYLE)
-            .bg(NORMAL_ROW_BG)
+            .border_style(INFO_HEADER_STYLE)
+            .bg(self.palette.black)
             .padding(Padding::horizontal(1));
 
         // Check if the user is editing an item
@@ -633,7 +636,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(TEXT_FG_EDITING)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -648,7 +651,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(TEXT_FG_ADDING)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -661,7 +664,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(TEXT_FG_DELETING)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -681,7 +684,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
-                    .fg(TEXT_FG_COLOR)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -708,7 +711,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
-                    .fg(TEXT_FG_COLOR)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -717,10 +720,11 @@ impl App {
 
     fn render_subtasks(&mut self, area: Rect, buf: &mut Buffer) {
         let block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(TODO_HEADER_STYLE)
+            .borders(Borders::TOP)
+            .border_set(symbols::border::EMPTY)
+            .border_style(SUBTASK_HEADER_STYLE)
             .title(Line::raw("Subtasks").centered())
-            .bg(NORMAL_ROW_BG);
+            .bg(self.palette.black);
 
         match self.current_screen {
             CurrentScreen::Subtask => {
@@ -744,7 +748,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(TEXT_FG_ADDING)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -767,19 +771,18 @@ impl App {
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
-                    .fg(TEXT_FG_COLOR)
+                    .fg(self.palette.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
         }
     }
-}
-
-const fn alternate_colors(i: usize) -> Color {
-    if i % 2 == 0 {
-        NORMAL_ROW_BG
-    } else {
-        ALT_ROW_BG_COLOR
+    const fn alternate_colors(&self, i: usize) -> Color {
+        if i % 2 == 0 {
+            self.palette.background
+        } else {
+            self.palette.black
+        }
     }
 }
 
@@ -788,7 +791,7 @@ impl From<&Task> for ListItem<'_> {
         let line = match value.status {
             Status::Todo => Line::styled(format!("◇ {}", value.name), TEXT_FG_COLOR),
             Status::Doing => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
-            Status::Done => Line::styled(format!("✓ {}", value.name), COMPLETED_TEXT_FG_COLOR),
+            Status::Done => Line::styled(format!("✓ {}", value.name), TEXT_FG_COLOR),
         };
         ListItem::new(line)
     }
