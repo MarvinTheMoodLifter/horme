@@ -3,7 +3,7 @@
 [<img src="https://github.com/MarvinTheMoodLifter/horme/blob/main/assets/horme-banner.png?raw=true" width="500" />](https://github.com/MarvinTheMoodLifter/horme/wiki)
 
 A simple command-line ToDo list application.<br>
-*Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details.*
+_Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details._
 
 </div>
 
@@ -16,6 +16,7 @@ A simple command-line ToDo list application.<br>
 > Feel free to contribute your ideas by sending pull requests or issues on Github.
 
 ---
+
 ## 💠 Features
 
 - TUI ([Ratatui](https://ratatui.rs))
@@ -28,23 +29,26 @@ A simple command-line ToDo list application.<br>
 - Save and load your to-do list in markdown format for easy access and sharing
 
 ## 🧪 Upcoming
-* [x] Add a new task. You can specify the name and description of the task
-* [ ] Help overlay
-* [x] Delete a task
-* [ ] Tasks deadlines
-* [ ] Filter tasks by completion status, due date, and overdue status
-* [ ] Divide the tasks into user defined categories
-* [ ] Customizable theme
-* [ ] Add subtasks to a task
-* [ ] Improve error handling and user input validation for robustness and user-friendliness
-* [ ] Encryption support
+
+- [x] Add a new task. You can specify the name and description of the task
+- [x] Delete a task
+- [x] Add subtasks to a task
+- [ ] Help overlay
+- [ ] Tasks deadlines
+- [ ] Filter tasks by completion status, due date, and overdue status
+- [ ] Divide the tasks into user defined categories
+- [ ] Customizable theme
+- [ ] Improve error handling and user input validation for robustness and user-friendliness
+- [ ] Encryption support
 
 ## 📦 Install
 
 ### Prerequisites
+
 To build and run Horme, make sure you have Rust installed on your system. [Here](https://www.rust-lang.org/tools/install) you can find the official guide to install the toolchain.
 
 ### Building from source
+
 ```bash
 git clone https://github.com/MarvinTheMoodLifter/horme.git
 cd horme
