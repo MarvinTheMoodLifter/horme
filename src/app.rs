@@ -35,7 +35,7 @@ const SUBTASK_HEADER_STYLE: Style = Style::new()
     .add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c800;
 
-use crate::colors::ColorPalette;
+use crate::colors::Palette;
 use crate::task::{Status, Subtask, Task};
 
 //#[derive(Debug)]
@@ -46,7 +46,7 @@ pub struct App {
     pub subtask_list: SubtaskList,
     pub file_path: PathBuf,
     pub sections_order: Vec<String>,
-    pub palette: ColorPalette,
+    pub palette: Palette,
     pub should_exit: bool,
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
@@ -133,7 +133,7 @@ impl Default for App {
                     Status::Done,
                 ),
             ]),
-            palette: ColorPalette::default(),
+            palette: Palette::new("default"),
             subtask_list: SubtaskList::default(),
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -184,7 +184,7 @@ impl App {
                 "## Doing".to_string(),
                 "## Done".to_string(),
             ],
-            palette: ColorPalette::default(),
+            palette: Palette::new("default"),
             should_exit: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -545,7 +545,7 @@ impl App {
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
             .border_style(TODO_HEADER_STYLE)
-            .bg(self.palette.background);
+            .bg(self.palette.colors.background);
 
         let items: Vec<ListItem> = self
             .todo_list
@@ -556,9 +556,9 @@ impl App {
                 if i < self.todo_list.items.len() {
                     let bg_color = self.alternate_colors(i);
                     let fg_color = match todo_item.status {
-                        Status::Todo => self.palette.light_yellow,
-                        Status::Doing => self.palette.light_magenta,
-                        Status::Done => self.palette.light_green,
+                        Status::Todo => self.palette.colors.light_yellow,
+                        Status::Doing => self.palette.colors.light_magenta,
+                        Status::Done => self.palette.colors.light_green,
                     };
                     Some(
                         ListItem::from(todo_item.name.clone())
@@ -577,13 +577,13 @@ impl App {
                     if i < self.todo_list.items.len() {
                         match self.todo_list.items[i].status {
                             Status::Todo => Style::default()
-                                .fg(self.palette.light_yellow)
+                                .fg(self.palette.colors.light_yellow)
                                 .add_modifier(Modifier::BOLD),
                             Status::Doing => Style::default()
-                                .fg(self.palette.light_magenta)
+                                .fg(self.palette.colors.light_magenta)
                                 .add_modifier(Modifier::BOLD),
                             Status::Done => Style::default()
-                                .fg(self.palette.light_green)
+                                .fg(self.palette.colors.light_green)
                                 .add_modifier(Modifier::BOLD),
                         }
                     } else {
@@ -620,7 +620,7 @@ impl App {
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
             .border_style(INFO_HEADER_STYLE)
-            .bg(self.palette.black)
+            .bg(self.palette.colors.black)
             .padding(Padding::horizontal(1));
 
         // Check if the user is editing an item
@@ -636,7 +636,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -651,7 +651,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -664,7 +664,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -684,7 +684,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -711,7 +711,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -724,7 +724,7 @@ impl App {
             .border_set(symbols::border::EMPTY)
             .border_style(SUBTASK_HEADER_STYLE)
             .title(Line::raw("Subtasks").centered())
-            .bg(self.palette.black);
+            .bg(self.palette.colors.black);
 
         match self.current_screen {
             CurrentScreen::Subtask => {
@@ -748,7 +748,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -771,7 +771,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(info)
                     .block(block)
-                    .fg(self.palette.foreground)
+                    .fg(self.palette.colors.foreground)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }
@@ -779,9 +779,9 @@ impl App {
     }
     const fn alternate_colors(&self, i: usize) -> Color {
         if i % 2 == 0 {
-            self.palette.background
+            self.palette.colors.black
         } else {
-            self.palette.black
+            self.palette.colors.gray
         }
     }
 }
