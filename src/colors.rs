@@ -87,3 +87,33 @@ impl Default for ColorPalette {
         Self::new("dark")
     }
 }
+
+pub fn convert_hex_to_rgb(hex: &str) -> Color {
+    // Don't consider the first '#' character
+    // Check if it's a 3 or 6 character hex code
+    let mut r = 0;
+    let mut g = 0;
+    let mut b = 0;
+    // Remove the '#' character
+    let hex = &hex[1..];
+
+    match hex.len() {
+        3 => {
+            // Convert 3 character hex code to 6 by repeating each character
+            // and save the new value in the r, g, and b variables
+
+            r = u8::from_str_radix(&hex[0..1].repeat(2), 16).unwrap();
+            g = u8::from_str_radix(&hex[1..2].repeat(2), 16).unwrap();
+            b = u8::from_str_radix(&hex[2..3].repeat(2), 16).unwrap();
+        }
+        6 => {
+            r = u8::from_str_radix(&hex[0..2], 16).unwrap();
+            g = u8::from_str_radix(&hex[2..4], 16).unwrap();
+            b = u8::from_str_radix(&hex[4..6], 16).unwrap();
+        }
+        _ => {
+            return Color::Rgb(r, g, b);
+        }
+    }
+    Color::Rgb(r, g, b)
+}

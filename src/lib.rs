@@ -6,6 +6,8 @@ mod tui;
 pub use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 pub use ratatui::prelude::*;
 
+pub use ratatui::style::{Color, Modifier, Style};
+
 pub use app::App;
 pub use task::Status;
 pub use task::Task;
@@ -24,5 +26,11 @@ mod tests {
             None,
         );
         assert_eq!(task.name, "task");
+    }
+
+    #[test]
+    fn convert_hex_to_rgb() {
+        let color = colors::convert_hex_to_rgb("#fff");
+        assert_eq!(color, Color::Rgb(255, 255, 255));
     }
 }
