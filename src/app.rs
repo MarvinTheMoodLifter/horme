@@ -167,7 +167,7 @@ impl FromIterator<&'static str> for SubtaskList {
 }
 
 impl App {
-    pub fn new(todo_list: Vec<Task>, file_path: &Path) -> Self {
+    pub fn new(todo_list: Vec<Task>, file_path: &Path, theme: &str) -> Self {
         let state = ListState::default();
 
         Self {
@@ -184,7 +184,7 @@ impl App {
                 "## Doing".to_string(),
                 "## Done".to_string(),
             ],
-            palette: Palette::new("default"),
+            palette: Palette::new(theme),
             should_exit: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,

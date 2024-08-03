@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 color-eyre = "0.6.3"
 crossterm = "0.28"
+hocon = "0.9.0"
 ratatui = "0.27.0"
 regex = "1.10.5"
 strum = "0.26"

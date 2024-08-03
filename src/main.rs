@@ -3,6 +3,8 @@ use regex::Regex;
 use std::fs;
 use std::path::Path;
 
+use hocon::HoconLoader;
+
 mod app;
 mod colors;
 mod task;
@@ -20,11 +22,19 @@ fn main() -> Result<()> {
 
     // File todo.md must exist in the current path
     let file_path = Path::new("todo.md");
+
+    // Read the config file
+    let config = HoconLoader::new()
+        .load_file("tests/data/theme.conf")?
+        .hocon()?;
+
+    let theme = config["theme"].as_string().unwrap_or("default".to_string());
+
     // Build the list of tasks from a markdown file
     let todo_list = build_todo_list(file_path)?;
 
     // Initialize the application
-    let mut app = App::new(todo_list, file_path);
+    let mut app = App::new(todo_list, file_path, theme.as_str());
 
     // Run the application
     app.run(terminal)?;
