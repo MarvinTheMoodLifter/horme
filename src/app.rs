@@ -321,14 +321,14 @@ impl App {
             for task in sections.get(section).unwrap() {
                 data.push_str(&format!("- {}\n", task.name));
                 if !task.description.is_empty() {
-                    data.push_str(&format!("    > {}\n", task.description));
+                    data.push_str(&format!("  > {}\n", task.description));
                 }
                 if !task.subtasks.is_empty() {
                     for subtask in &task.subtasks {
                         if subtask.status {
-                            data.push_str(&format!("    * [x] {}\n", subtask.name));
+                            data.push_str(&format!("  - [x] {}\n", subtask.name));
                         } else {
-                            data.push_str(&format!("    * [ ] {}\n", subtask.name));
+                            data.push_str(&format!("  - [ ] {}\n", subtask.name));
                         }
                     }
                 }
@@ -669,7 +669,7 @@ impl App {
                 // Render the item info
                 Paragraph::new(input)
                     .block(block)
-                    .fg(self.palette.colors.foreground)
+                    .fg(self.palette.colors.cancelled)
                     .wrap(Wrap { trim: false })
                     .render(area, buf);
             }

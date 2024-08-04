@@ -85,13 +85,12 @@ pub fn convert_hex_to_rgb(hex: &str) -> Color {
             b = u8::from_str_radix(&hex[2..3].repeat(2), 16).unwrap();
         }
         6 => {
+            // Convert 6 character hex code to r, g, and b
             r = u8::from_str_radix(&hex[0..2], 16).unwrap();
             g = u8::from_str_radix(&hex[2..4], 16).unwrap();
             b = u8::from_str_radix(&hex[4..6], 16).unwrap();
         }
-        _ => {
-            return Color::Rgb(r, g, b);
-        }
+        _ => {}
     }
     Color::Rgb(r, g, b)
 }

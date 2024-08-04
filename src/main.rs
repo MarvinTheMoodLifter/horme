@@ -102,16 +102,16 @@ fn build_todo_list(file_path: &Path) -> Result<Vec<Task>> {
                 status,
                 None,
             ));
-        } else if line.starts_with("    >") {
+        } else if line.starts_with("  > ") {
             if let Some(last_element) = todo_list.last_mut() {
-                last_element.add_description(&line[5..].trim());
+                last_element.add_description(&line[4..].trim());
             }
-        } else if line.starts_with("    * [ ]") || line.starts_with("    * [x]") {
+        } else if line.starts_with("  - [ ] ") || line.starts_with("  - [x] ") {
             if let Some(last_element) = todo_list.last_mut() {
-                if line.starts_with("    * [ ]") {
-                    last_element.add_subtask(line[9..].trim().to_string(), false);
-                } else if line.starts_with("    * [x]") {
-                    last_element.add_subtask(line[9..].trim().to_string(), true);
+                if line.starts_with("  - [ ] ") {
+                    last_element.add_subtask(line[8..].trim().to_string(), false);
+                } else if line.starts_with("  - [x] ") {
+                    last_element.add_subtask(line[8..].trim().to_string(), true);
                 }
             }
         }
