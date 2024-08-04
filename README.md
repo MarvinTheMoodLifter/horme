@@ -18,7 +18,7 @@ _Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more de
 ---
 
 <div align="center">
-    <img src="https://github.com/MarvinTheMoodLifter/horme/blob/develop/assets/horme-screenshot.png" width="500"/>
+    <img src="https://github.com/MarvinTheMoodLifter/horme/blob/develop/assets/horme-screenshot.png"/>
 </div>
 
 ## 💠 Features
