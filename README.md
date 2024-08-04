@@ -1,6 +1,6 @@
 <div align="center">
 
-[<img src="https://github.com/MarvinTheMoodLifter/horme/blob/main/assets/horme-banner.png?raw=true" width="500" />](https://github.com/MarvinTheMoodLifter/horme/wiki)
+[<img src="https://github.com/MarvinTheMoodLifter/horme/blob/main/assets/horme-banner.png?raw=true" width="500"/>](https://github.com/MarvinTheMoodLifter/horme/wiki)
 
 A simple command-line ToDo list application.<br>
 _Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more details._
@@ -12,10 +12,12 @@ _Check the [Wiki](https://github.com/MarvinTheMoodLifter/horme/wiki) for more de
 > Consider this a WIP!
 
 > [!NOTE]
-> Also keep in mind that this is my first real project, so the polish of the code might be lacking.
+> Also keep in mind that this is one of my first projects, so the polish of the code will be surely lacking.
 > Feel free to contribute your ideas by sending pull requests or issues on Github.
 
 ---
+
+<img src="https://github.com/MarvinTheMoodLifter/horme/blob/main/assets/horme-screenshot.png?raw=true" width="500"/>
 
 ## 💠 Features
 
