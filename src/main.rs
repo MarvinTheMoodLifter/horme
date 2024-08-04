@@ -23,18 +23,14 @@ fn main() -> Result<()> {
     // File todo.md must exist in the current path
     let file_path = Path::new("todo.md");
 
-    // Read the config file
-    let config = HoconLoader::new()
-        .load_file("tests/data/theme.conf")?
-        .hocon()?;
-
-    let theme = config["theme"].as_string().unwrap_or("default".to_string());
+    // Build the theme from the config file
+    let theme = build_theme()?;
 
     // Build the list of tasks from a markdown file
     let todo_list = build_todo_list(file_path)?;
 
     // Initialize the application
-    let mut app = App::new(todo_list, file_path, theme.as_str());
+    let mut app = App::new(todo_list, file_path, theme);
 
     // Run the application
     app.run(terminal)?;
@@ -42,6 +38,37 @@ fn main() -> Result<()> {
     restore_terminal()?;
 
     Ok(())
+}
+
+fn build_theme() -> Result<Vec<String>> {
+    let config = HoconLoader::new()
+        .load_file("tests/data/theme.conf")?
+        .hocon()?;
+
+    let colors: Vec<String> = vec![
+        config["background"].as_string().unwrap(),
+        config["foreground"].as_string().unwrap(),
+        config["altbackground"].as_string().unwrap(),
+        config["todo"].as_string().unwrap(),
+        config["doing"].as_string().unwrap(),
+        config["done"].as_string().unwrap(),
+        config["info"].as_string().unwrap(),
+        config["subtask"].as_string().unwrap(),
+        config["cancelled"].as_string().unwrap(),
+    ];
+
+    Ok(colors)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_build_theme() {
+        let theme = build_theme().unwrap();
+        assert_eq!(theme.len(), 8);
+        assert_eq!(theme[0], "#2b292d");
+    }
 }
 
 fn build_todo_list(file_path: &Path) -> Result<Vec<Task>> {

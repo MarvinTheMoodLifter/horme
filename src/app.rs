@@ -5,7 +5,7 @@ use ratatui::{
     backend::Backend,
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{palette::tailwind::*, Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style, Stylize},
     symbols,
     terminal::Terminal,
     text::Line,
@@ -21,21 +21,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const TODO_HEADER_STYLE: Style = Style::new()
-    .fg(SLATE.c800)
-    .bg(AMBER.c400)
-    .add_modifier(Modifier::BOLD);
-const INFO_HEADER_STYLE: Style = Style::new()
-    .fg(SLATE.c800)
-    .bg(GREEN.c400)
-    .add_modifier(Modifier::BOLD);
-const SUBTASK_HEADER_STYLE: Style = Style::new()
-    .fg(SLATE.c800)
-    .bg(RED.c400)
-    .add_modifier(Modifier::BOLD);
-const TEXT_FG_COLOR: Color = SLATE.c800;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-use crate::colors::Palette;
+use crate::colors::{ColorPalette, Palette};
 use crate::task::{Status, Subtask, Task};
 
 //#[derive(Debug)]
@@ -133,7 +121,7 @@ impl Default for App {
                     Status::Done,
                 ),
             ]),
-            palette: Palette::new("default"),
+            palette: Palette::default(),
             subtask_list: SubtaskList::default(),
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -167,7 +155,7 @@ impl FromIterator<&'static str> for SubtaskList {
 }
 
 impl App {
-    pub fn new(todo_list: Vec<Task>, file_path: &Path, theme: &str) -> Self {
+    pub fn new(todo_list: Vec<Task>, file_path: &Path, colors: Vec<String>) -> Self {
         let state = ListState::default();
 
         Self {
@@ -184,7 +172,7 @@ impl App {
                 "## Doing".to_string(),
                 "## Done".to_string(),
             ],
-            palette: Palette::new(theme),
+            palette: Palette::new("default", ColorPalette::new(colors)),
             should_exit: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -516,8 +504,8 @@ impl Widget for &mut App {
         let [list_area, subtask_area] =
             Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(item_area);
 
-        App::render_header(header_area, buf);
-        App::render_footer(footer_area, buf);
+        self.render_header(header_area, buf);
+        self.render_footer(footer_area, buf);
         self.render_list(list_area, buf);
         self.render_selected_item(info_area, buf);
         self.render_subtasks(subtask_area, buf);
@@ -526,25 +514,37 @@ impl Widget for &mut App {
 
 // Rendering logic for the app
 impl App {
-    fn render_header(area: Rect, buf: &mut Buffer) {
-        Paragraph::new("Horme").bold().centered().render(area, buf);
+    fn render_header(&self, area: Rect, buf: &mut Buffer) {
+        Paragraph::new(format!("{}: {}", "Horme", VERSION))
+            .bold()
+            .bg(self.palette.colors.background)
+            .fg(self.palette.colors.foreground)
+            .centered()
+            .render(area, buf);
     }
 
-    fn render_footer(area: Rect, buf: &mut Buffer) {
+    fn render_footer(&self, area: Rect, buf: &mut Buffer) {
         Paragraph::new(
             "Press j/k to select, a to add new task, Enter to edit, d to delete, q to quit",
         )
+        .bg(self.palette.colors.background)
+        .fg(self.palette.colors.foreground)
         .centered()
         .render(area, buf);
     }
 
     // Iterate through the list of tasks and render them
     fn render_list(&mut self, area: Rect, buf: &mut Buffer) {
+        let header_style = Style::new()
+            .fg(self.palette.colors.background)
+            .bg(self.palette.colors.todo)
+            .add_modifier(Modifier::BOLD);
+
         let block = Block::new()
             .title(Line::raw("Tasks").centered())
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
-            .border_style(TODO_HEADER_STYLE)
+            .border_style(header_style)
             .bg(self.palette.colors.background);
 
         let items: Vec<ListItem> = self
@@ -556,9 +556,9 @@ impl App {
                 if i < self.todo_list.items.len() {
                     let bg_color = self.alternate_colors(i);
                     let fg_color = match todo_item.status {
-                        Status::Todo => self.palette.colors.light_yellow,
-                        Status::Doing => self.palette.colors.light_magenta,
-                        Status::Done => self.palette.colors.light_green,
+                        Status::Todo => self.palette.colors.todo,
+                        Status::Doing => self.palette.colors.doing,
+                        Status::Done => self.palette.colors.done,
                     };
                     Some(
                         ListItem::from(todo_item.name.clone())
@@ -577,13 +577,13 @@ impl App {
                     if i < self.todo_list.items.len() {
                         match self.todo_list.items[i].status {
                             Status::Todo => Style::default()
-                                .fg(self.palette.colors.light_yellow)
+                                .fg(self.palette.colors.todo)
                                 .add_modifier(Modifier::BOLD),
                             Status::Doing => Style::default()
-                                .fg(self.palette.colors.light_magenta)
+                                .fg(self.palette.colors.doing)
                                 .add_modifier(Modifier::BOLD),
                             Status::Done => Style::default()
-                                .fg(self.palette.colors.light_green)
+                                .fg(self.palette.colors.done)
                                 .add_modifier(Modifier::BOLD),
                         }
                     } else {
@@ -614,13 +614,18 @@ impl App {
     }
 
     fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
+        let header_style = Style::new()
+            .fg(self.palette.colors.background)
+            .bg(self.palette.colors.info)
+            .add_modifier(Modifier::BOLD);
+
         // Show the list item's info under the list in this paragraph
         let block = Block::new()
             .title(Line::raw("Info").centered())
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
-            .border_style(INFO_HEADER_STYLE)
-            .bg(self.palette.colors.black)
+            .border_style(header_style)
+            .bg(self.palette.colors.background)
             .padding(Padding::horizontal(1));
 
         // Check if the user is editing an item
@@ -719,12 +724,18 @@ impl App {
     }
 
     fn render_subtasks(&mut self, area: Rect, buf: &mut Buffer) {
+        let header_style = Style::new()
+            .fg(self.palette.colors.background)
+            .bg(self.palette.colors.subtask)
+            .add_modifier(Modifier::BOLD);
+
         let block = Block::default()
             .borders(Borders::TOP)
             .border_set(symbols::border::EMPTY)
-            .border_style(SUBTASK_HEADER_STYLE)
+            .border_style(header_style)
             .title(Line::raw("Subtasks").centered())
-            .bg(self.palette.colors.black);
+            .fg(self.palette.colors.foreground)
+            .bg(self.palette.colors.background);
 
         match self.current_screen {
             CurrentScreen::Subtask => {
@@ -738,6 +749,7 @@ impl App {
                 let list = List::new(subtasks)
                     .block(block)
                     .highlight_symbol(">")
+                    .fg(self.palette.colors.foreground)
                     .highlight_spacing(HighlightSpacing::Always);
                 // Disambiguate this trait method as both `Widget` and `StatefulWidget`
                 // share the `render` method
@@ -777,11 +789,12 @@ impl App {
             }
         }
     }
+
     const fn alternate_colors(&self, i: usize) -> Color {
         if i % 2 == 0 {
-            self.palette.colors.black
+            self.palette.colors.background
         } else {
-            self.palette.colors.gray
+            self.palette.colors.altbackground
         }
     }
 }
@@ -789,9 +802,9 @@ impl App {
 impl From<&Task> for ListItem<'_> {
     fn from(value: &Task) -> Self {
         let line = match value.status {
-            Status::Todo => Line::styled(format!("◇ {}", value.name), TEXT_FG_COLOR),
-            Status::Doing => Line::styled(format!("◎ {}", value.name), TEXT_FG_COLOR),
-            Status::Done => Line::styled(format!("✓ {}", value.name), TEXT_FG_COLOR),
+            Status::Todo => Line::styled(format!("◇ {}", value.name), Style::default()),
+            Status::Doing => Line::styled(format!("◎ {}", value.name), Style::default()),
+            Status::Done => Line::styled(format!("✓ {}", value.name), Style::default()),
         };
         ListItem::new(line)
     }
@@ -800,8 +813,8 @@ impl From<&Task> for ListItem<'_> {
 impl From<&Subtask> for ListItem<'_> {
     fn from(value: &Subtask) -> Self {
         let line = match value.status {
-            true => Line::styled(format!("[x] {}", value.name), TEXT_FG_COLOR),
-            false => Line::styled(format!("[ ] {}", value.name), TEXT_FG_COLOR),
+            true => Line::styled(format!("[x] {}", value.name), Style::default()),
+            false => Line::styled(format!("[ ] {}", value.name), Style::default()),
         };
         ListItem::new(line)
     }
